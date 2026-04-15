@@ -501,36 +501,70 @@ export default function PortfolioTab({
   const [showForm, setShowForm] = useState(false)
   const [csvImporting, setCsvImporting] = useState(false)
   const [csvMessage, setCsvMessage] = useState('')
-  // Set of tickers whose chart is expanded — starts empty, auto-expands after import
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set())
   const [yahooSectors, setYahooSectors] = useState<Record<string, string>>({})
+  // Live prices from Yahoo Finance — overrides DB-stored current_price
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({})
+  const [pricesLoading, setPricesLoading] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Auto-fetch sectors for all holdings on mount (yahooSectors is lost on refresh)
+  // On mount, fetch live prices + sectors for all holdings from Yahoo Finance.
+  // current_price in DB is set at import time (= buy price) — we need real market prices.
   const tickerKey = holdings.map(h => h.ticker).sort().join(',')
   useEffect(() => {
-    if (!holdings.length) return
+    if (!holdings.length) { setPricesLoading(false); return }
+    setPricesLoading(true)
     Promise.allSettled(
       holdings.map(h =>
         fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
           .then(r => r.json())
-          .then((d: { sector?: string }) => ({ ticker: h.ticker, sector: d.sector || 'Other' }))
-          .catch(() => ({ ticker: h.ticker, sector: 'Other' }))
+          .then((d: { sector?: string; currentPrice?: number }) => ({
+            ticker: h.ticker,
+            sector: d.sector || 'Other',
+            currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
+          }))
+          .catch(() => ({ ticker: h.ticker, sector: 'Other', currentPrice: null }))
       )
     ).then(results => {
-      const map: Record<string, string> = {}
-      results.forEach(r => { if (r.status === 'fulfilled') map[r.value.ticker] = r.value.sector })
-      setYahooSectors(map)
+      const sectorMap: Record<string, string> = {}
+      const priceMap: Record<string, number> = {}
+      results.forEach(r => {
+        if (r.status !== 'fulfilled') return
+        sectorMap[r.value.ticker] = r.value.sector
+        if (r.value.currentPrice !== null) priceMap[r.value.ticker] = r.value.currentPrice
+      })
+      setYahooSectors(sectorMap)
+      setLivePrices(priceMap)
+      setPricesLoading(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickerKey])
+
+  // Get the best available price for a holding: live Yahoo price > DB price
+  const getPrice = (h: Holding): number => livePrices[h.ticker] ?? h.current_price
   const [formData, setFormData] = useState({
     ticker: '', name: '', shares: '', buy_price: '', current_price: '',
     sector: 'Technology', currency: 'NZD',
   })
 
-  const portfolioBeta = calcPortfolioBeta(holdings, metrics.totalValue)
-  const diversification = calcDiversification(holdings, metrics.totalValue)
+  // Recalculate metrics using live prices so value reflects today's market, not buy price
+  const liveMetrics = (() => {
+    const totalValue = holdings.reduce((sum, h) => sum + getPrice(h) * h.shares, 0)
+    const costBasis  = holdings.reduce((sum, h) => sum + h.buy_price * h.shares, 0)
+    const totalPL = totalValue - costBasis
+    const totalPLPercent = costBasis > 0 ? (totalPL / costBasis) * 100 : 0
+    const holdingsPL = holdings.map(h => ({
+      ticker: h.ticker,
+      plPercent: h.buy_price > 0 ? ((getPrice(h) - h.buy_price) / h.buy_price) * 100 : 0,
+      value: getPrice(h) * h.shares,
+    }))
+    const best  = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent > b.plPercent ? a : b) : null
+    const worst = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent < b.plPercent ? a : b) : null
+    return { totalValue, costBasis, totalPL, totalPLPercent, bestPerformer: best, worstPerformer: worst }
+  })()
+
+  const portfolioBeta = calcPortfolioBeta(holdings, liveMetrics.totalValue)
+  const diversification = calcDiversification(holdings, liveMetrics.totalValue)
   const allTickers = holdings.map(h => h.ticker)
 
   const newsSignals = briefing?.content.newsCards
@@ -571,32 +605,43 @@ export default function PortfolioTab({
       const parsed = parseSharesiesCSV(text)
       if (!parsed.length) { setCsvMessage('Could not parse CSV. Use a Sharesies transaction export.'); return }
 
-      // Fetch Yahoo Finance sector+industry for all tickers in parallel
+      // Fetch live prices + sectors for all tickers in parallel
       const yahooResults = await Promise.allSettled(
         parsed.map(h =>
           fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
             .then(r => r.json())
-            .then(d => ({ ticker: h.ticker, sector: d.sector || 'Other', industry: d.industry || '' }))
-            .catch(() => ({ ticker: h.ticker, sector: 'Other', industry: '' }))
+            .then((d: { sector?: string; industry?: string; currentPrice?: number }) => ({
+              ticker: h.ticker,
+              sector: d.sector || 'Other',
+              industry: d.industry || '',
+              currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
+            }))
+            .catch(() => ({ ticker: h.ticker, sector: 'Other', industry: '', currentPrice: null }))
         )
       )
       const sectorMap: Record<string, string> = {}
+      const importPriceMap: Record<string, number> = {}
       yahooResults.forEach(r => {
-        if (r.status === 'fulfilled') sectorMap[r.value.ticker] = r.value.sector
+        if (r.status !== 'fulfilled') return
+        sectorMap[r.value.ticker] = r.value.sector
+        if (r.value.currentPrice !== null) importPriceMap[r.value.ticker] = r.value.currentPrice
       })
 
       let added = 0
       for (const h of parsed) {
         const baseTicker = h.ticker.toUpperCase().split('.')[0]
         const sector = TICKER_SECTORS[baseTicker] || sectorMap[h.ticker] || 'Other'
-        await onAddHolding({ ...h, sector })
+        // Use live market price if available; fall back to average buy price
+        const current_price = importPriceMap[h.ticker] ?? h.buy_price
+        await onAddHolding({ ...h, sector, current_price })
         added++
       }
 
-      // Update Yahoo sectors state & auto-expand all newly imported tickers
+      // Update live price + sector state, auto-expand newly imported tickers
       setYahooSectors(prev => ({ ...prev, ...sectorMap }))
+      setLivePrices(prev => ({ ...prev, ...importPriceMap }))
       setExpandedTickers(new Set(parsed.map(h => h.ticker)))
-      setCsvMessage(`Imported ${added} position${added !== 1 ? 's' : ''} — sectors auto-detected.`)
+      setCsvMessage(`Imported ${added} position${added !== 1 ? 's' : ''} — prices & sectors live from Yahoo.`)
     } catch {
       setCsvMessage('Error reading file.')
     } finally {
@@ -605,25 +650,26 @@ export default function PortfolioTab({
     }
   }
 
-  const holdingsWithPL = holdings.map(h => ({
-    ...h,
-    pl: (h.current_price - h.buy_price) * h.shares,
-    plPercent: h.buy_price > 0 ? ((h.current_price - h.buy_price) / h.buy_price) * 100 : 0,
-    beta: STOCK_BETAS[h.ticker.toUpperCase()] ?? 1.0,
-    weight: metrics.totalValue > 0 ? (h.current_price * h.shares) / metrics.totalValue * 100 : 0,
-  }))
+  const holdingsWithPL = holdings.map(h => {
+    const livePrice = getPrice(h)
+    return {
+      ...h,
+      current_price: livePrice,
+      pl: (livePrice - h.buy_price) * h.shares,
+      plPercent: h.buy_price > 0 ? ((livePrice - h.buy_price) / h.buy_price) * 100 : 0,
+      beta: STOCK_BETAS[h.ticker.toUpperCase()] ?? 1.0,
+      weight: liveMetrics.totalValue > 0 ? (livePrice * h.shares) / liveMetrics.totalValue * 100 : 0,
+    }
+  })
 
   const effectiveSectors = holdings.map(h => {
     const baseTicker = h.ticker.toUpperCase().split('.')[0]
-    // Priority: 1) client-side hardcoded map (instant, reliable)
-    //           2) Yahoo API result fetched on mount
-    //           3) value stored in DB
     const sector =
       TICKER_SECTORS[baseTicker] ||
       yahooSectors[h.ticker] ||
       (h.sector && h.sector !== 'Other' ? h.sector : null) ||
       'Other'
-    return { sector, value: h.current_price * h.shares }
+    return { sector, value: getPrice(h) * h.shares }
   })
 
   const sectorAllocation = effectiveSectors.reduce((acc, h) => {
@@ -672,17 +718,20 @@ export default function PortfolioTab({
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <MetricCard label="Total Value" value={`$${metrics.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
-        <MetricCard label="Cost Basis" value={`$${metrics.costBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+        <MetricCard
+          label="Total Value"
+          value={pricesLoading ? '...' : `$${liveMetrics.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+        />
+        <MetricCard label="Cost Basis" value={`$${liveMetrics.costBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
         <MetricCard
           label="Unrealised P&L"
-          value={`${metrics.totalPL >= 0 ? '+' : ''}$${Math.abs(metrics.totalPL).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-          accent={metrics.totalPL >= 0 ? 'text-green-text' : 'text-red-text'}
+          value={pricesLoading ? '...' : `${liveMetrics.totalPL >= 0 ? '+' : ''}$${Math.abs(liveMetrics.totalPL).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+          accent={liveMetrics.totalPL >= 0 ? 'text-green-text' : 'text-red-text'}
         />
         <MetricCard
           label="Return"
-          value={`${metrics.totalPLPercent >= 0 ? '+' : ''}${metrics.totalPLPercent.toFixed(1)}%`}
-          accent={metrics.totalPLPercent >= 0 ? 'text-green-text' : 'text-red-text'}
+          value={pricesLoading ? '...' : `${liveMetrics.totalPLPercent >= 0 ? '+' : ''}${liveMetrics.totalPLPercent.toFixed(1)}%`}
+          accent={liveMetrics.totalPLPercent >= 0 ? 'text-green-text' : 'text-red-text'}
         />
         <MetricCard label="Holdings" value={`${holdings.length}`} />
         <MetricCard
