@@ -35,21 +35,32 @@ export async function GET(request: NextRequest) {
     // Generate briefing with Groq
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const prompt = `You are a senior macro strategist at a top-tier global investment bank. Generate a complete daily market intelligence briefing as structured JSON.
+    const prompt = `You are a senior macro strategist at a top-tier global investment bank who also tracks world events with the eye of a seasoned journalist. Generate a complete daily briefing as structured JSON — covering BOTH financial markets AND major world news. Think Bloomberg meets Reuters meets The Economist.
 
 Prior briefings context:
 ${historyContext}
 
-Today is ${today}. Analyze:
-1. Overnight equity market moves (S&P 500, NASDAQ, NZX 50, ASX 200)
-2. Central bank news (Fed, RBNZ, RBA, ECB, BoJ)
-3. Commodity prices (oil WTI/Brent, gold, copper, lithium)
-4. Geopolitical developments with market implications
-5. Tech/AI sector news (semiconductors, AI capex, earnings)
-6. Crypto market overview
-7. Industrial/supply chain developments
-8. Banking and finance news
-9. Healthcare/pharma developments
+Today is ${today}. Cover ALL of the following — do not skip non-financial stories:
+
+FINANCIAL MARKETS:
+1. Overnight equity market moves (S&P 500, NASDAQ, NZX 50, ASX 200, Europe)
+2. Central bank news (Fed, RBNZ, RBA, ECB, BoJ) — rate decisions, minutes, speeches
+3. Commodity moves (oil WTI/Brent, gold, copper, lithium, wheat, natural gas)
+4. Tech/AI earnings, semiconductor supply chains, AI capex announcements
+5. Crypto market overview (BTC, ETH, regulatory news)
+6. Banking, M&A, IPO activity
+
+WORLD NEWS (with market angle):
+7. US politics — Trump statements, executive orders, tariffs, social media posts and what they signal
+8. Geopolitics — Middle East, Russia-Ukraine, China-Taiwan, South China Sea, sanctions
+9. Trade and supply chain — shipping routes, tanker movements, port disruptions, tariff impacts
+10. Energy security — OPEC decisions, pipeline politics, LNG flows, refinery capacity
+11. Climate/weather events with economic impact — floods, droughts, hurricanes affecting crops or infrastructure
+12. Big cultural/social moments that move markets — sports events, viral stories, consumer sentiment shifts
+13. Global health — pandemics, drug approvals, healthcare policy
+14. Space, tech breakthroughs, scientific discoveries with commercial implications
+
+For each news card, explain the MARKET ANGLE — even for non-financial stories. Trump posting on social media, a tanker diversion, a drought in key wheat-growing regions — all of these move markets. Explain how and why.
 
 For each theme in prior briefings, explicitly note whether today's data STRENGTHENS, HOLDS, or WEAKENS the thesis.
 
@@ -93,12 +104,12 @@ Return ONLY valid JSON with no markdown or code fences:
   "macroSummary": "Risk-off sentiment from Fed pricing. Tech holding up on AI strength. Commodities mixed on growth concerns."
 }
 
-Generate at least 8 news cards, 5-6 movers, and 5-6 theses. For every news card include a "searchQuery" field with 3-5 words that would find the real story on Google News (e.g. "Fed rate decision April 2026").`
+Generate at least 12 news cards (mix of financial AND world news — politics, geopolitics, supply chain, culture, climate), 5-6 movers, and 5-6 theses. For every news card include a "searchQuery" field with 4-6 words to find the real story on Google News (e.g. "Trump tariffs China April 2026", "oil tankers Red Sea 2026").`
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 8000,
+      max_tokens: 12000,
       temperature: 0.7,
     })
 
