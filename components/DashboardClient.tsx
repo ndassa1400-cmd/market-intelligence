@@ -168,6 +168,7 @@ export default function DashboardClient({
             profile={profile}
             loading={briefingLoading}
             userTickers={holdings.map(h => h.ticker)}
+            holdings={holdings}
           />
         ) : (
           <PortfolioTab

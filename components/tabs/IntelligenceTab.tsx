@@ -1,12 +1,299 @@
 'use client'
 
-import { Profile, Briefing, NewsCard, Mover, Thesis } from '@/lib/types'
+import { useState, useEffect } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { Profile, Briefing, NewsCard, Mover, Thesis, Holding, PortfolioIntelligence, PortfolioSignal, MacroTheme, WatchItem, NewIdea } from '@/lib/types'
 
 interface IntelligenceTabProps {
   briefing: Briefing | null
   profile: Profile
   loading?: boolean
   userTickers?: string[]
+  holdings?: Holding[]
+}
+
+// ── Portfolio Intelligence Panel ─────────────────────────────────────────────
+
+const ACTION_STYLE: Record<string, { badge: string; dot: string }> = {
+  BUY:    { badge: 'bg-[#dcfce7] text-[#15803d] border border-[#86efac]', dot: 'bg-[#15803d]' },
+  ADD:    { badge: 'bg-[#ccfbf1] text-[#0f766e] border border-[#5eead4]', dot: 'bg-[#0d9488]' },
+  HOLD:   { badge: 'bg-[#dbeafe] text-[#1d4ed8] border border-[#93c5fd]', dot: 'bg-[#2563eb]' },
+  WATCH:  { badge: 'bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe]', dot: 'bg-[#7c3aed]' },
+  REDUCE: { badge: 'bg-[#fef3c7] text-[#b45309] border border-[#fcd34d]', dot: 'bg-[#d97706]' },
+  SELL:   { badge: 'bg-[#fee2e2] text-[#991b1b] border border-[#fca5a5]', dot: 'bg-[#dc2626]' },
+}
+
+const CONVICTION_STYLE: Record<string, string> = {
+  HIGH:   'text-[#dc2626] font-black',
+  MEDIUM: 'text-[#d97706] font-bold',
+  LOW:    'text-[#6b7280] font-medium',
+}
+
+const IMPACT_COLOR: Record<string, string> = {
+  BULLISH: 'text-[#15803d]',
+  BEARISH: 'text-[#dc2626]',
+  MIXED:   'text-[#d97706]',
+}
+
+const URGENCY_STYLE: Record<string, string> = {
+  HIGH:   'bg-[#fee2e2] text-[#991b1b] border border-[#fca5a5]',
+  MEDIUM: 'bg-[#fef3c7] text-[#b45309] border border-[#fcd34d]',
+  LOW:    'bg-[#f3f4f6] text-[#374151] border border-[#d1d5db]',
+}
+
+function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]; profile: Profile }) {
+  const [intel, setIntel] = useState<PortfolioIntelligence | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [ran, setRan] = useState(false)
+
+  const run = async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const res = await fetch('/api/portfolio-intelligence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdings, profile }),
+      })
+      if (!res.ok) throw new Error('API error')
+      const data = await res.json()
+      setIntel(data)
+      setRan(true)
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!ran && !loading) {
+    return (
+      <div className="bg-surface border border-border rounded-2xl p-8 shadow-card">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <p className="text-xs font-bold tracking-[0.18em] uppercase text-muted mb-1">Analyst Intelligence</p>
+            <h3 className="text-xl font-black text-text">Your Portfolio Under The Macro Lens</h3>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-[#7c3aed] flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-black">AI</span>
+          </div>
+        </div>
+        <p className="text-sm text-dim mb-6 max-w-xl">
+          Connects today's geopolitical and macro events to your specific holdings — buy/sell signals, causal chain reasoning, and new ideas a Goldman analyst would pitch.
+        </p>
+        <button
+          onClick={run}
+          className="px-6 py-3 bg-gradient-to-r from-accent to-[#7c3aed] text-white font-bold text-sm rounded-full hover:opacity-90 transition-opacity shadow-soft"
+        >
+          Run Analyst Briefing
+        </button>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-surface border border-border rounded-2xl p-10 shadow-card flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-[3px] border-accent/30 border-t-accent rounded-full animate-spin" />
+        <div className="text-center">
+          <p className="text-sm font-bold text-text2">Connecting the dots across your portfolio…</p>
+          <p className="text-xs text-dim mt-1">Geopolitics → commodities → sectors → your holdings</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !intel) {
+    return (
+      <div className="bg-surface border border-border rounded-2xl p-8 shadow-card text-center">
+        <p className="text-sm text-red-text mb-3">Analysis failed — try again</p>
+        <button onClick={run} className="px-5 py-2.5 bg-text text-bg text-xs font-bold rounded-full">Retry</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-bold tracking-[0.18em] uppercase text-muted mb-1">Analyst Intelligence</p>
+          <h3 className="text-2xl font-black text-text">Portfolio Macro View</h3>
+          {intel.analystNote && (
+            <p className="text-sm text-dim mt-2 max-w-2xl leading-relaxed">{intel.analystNote}</p>
+          )}
+        </div>
+        <button
+          onClick={run}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-surface2 border border-border rounded-full text-xs font-bold text-dim hover:text-text hover:border-border2 transition-all"
+        >
+          <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Portfolio Signals */}
+      {intel.portfolioSignals?.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted mb-4">Position Signals</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {intel.portfolioSignals.map((sig: PortfolioSignal) => {
+              const style = ACTION_STYLE[sig.action] || ACTION_STYLE.HOLD
+              return (
+                <div key={sig.ticker} className="bg-surface border border-border rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="text-sm font-black text-text bg-surface2 border border-border px-2.5 py-1 rounded-lg">
+                        {sig.ticker}
+                      </span>
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${style.badge}`}>
+                        {sig.action}
+                      </span>
+                      <span className={`text-[10px] ${CONVICTION_STYLE[sig.conviction] || 'text-dim font-medium'}`}>
+                        {sig.conviction} conviction
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-bold text-muted bg-surface2 px-2 py-1 rounded-full border border-border flex-shrink-0 ml-2">
+                      {sig.timeframe}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-text mb-2 leading-snug">{sig.headline}</p>
+                  <p className="text-xs text-dim leading-relaxed mb-3">{sig.reasoning}</p>
+                  {sig.catalyst && (
+                    <div className="flex items-start gap-2 bg-surface2 rounded-xl px-3 py-2 border border-border">
+                      <span className="text-[9px] font-black text-accent uppercase tracking-wide mt-0.5 flex-shrink-0">Catalyst</span>
+                      <p className="text-xs text-text2">{sig.catalyst}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Macro Themes */}
+      {intel.macroThemes?.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted mb-4">Macro Causal Chains</p>
+          <div className="space-y-3">
+            {intel.macroThemes.map((theme: MacroTheme, i: number) => (
+              <div key={i} className="bg-surface border border-border rounded-2xl p-6 shadow-card">
+                <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h4 className="text-sm font-black text-text">{theme.title}</h4>
+                    <span className={`text-xs font-black ${IMPACT_COLOR[theme.impact] || 'text-dim'}`}>
+                      ↑ {theme.impact}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {theme.affectedTickers?.map(t => (
+                      <span key={t} className="text-[10px] font-bold bg-surface2 border border-border px-2 py-0.5 rounded-md text-text2">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {/* Chain rendered with → arrows styled */}
+                <div className="bg-[#f8f6f2] rounded-xl p-4 mb-3 border border-border">
+                  <p className="text-xs text-text2 leading-relaxed font-mono">
+                    {theme.chain?.split('→').map((step, idx, arr) => (
+                      <span key={idx}>
+                        <span className={idx === 0 ? 'font-bold text-text' : idx === arr.length - 1 ? 'font-bold text-accent' : ''}>
+                          {step.trim()}
+                        </span>
+                        {idx < arr.length - 1 && (
+                          <span className="text-accent font-black mx-1">→</span>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+                {theme.newIdea && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-[9px] font-black text-[#0f766e] bg-[#ccfbf1] border border-[#5eead4] px-2 py-1 rounded-full flex-shrink-0">
+                      IDEA
+                    </span>
+                    <p className="text-xs text-dim">{theme.newIdea}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Watch Items + New Ideas side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Watch Items */}
+        {intel.watchItems?.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted mb-4">Watch List</p>
+            <div className="space-y-2.5">
+              {intel.watchItems.map((item: WatchItem, i: number) => (
+                <div key={i} className="bg-surface border border-border rounded-xl p-4 shadow-card">
+                  <div className="flex items-start gap-3">
+                    <span className={`text-[9px] font-black px-2 py-1 rounded-full border flex-shrink-0 mt-0.5 ${URGENCY_STYLE[item.urgency] || URGENCY_STYLE.LOW}`}>
+                      {item.urgency}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-text2 leading-relaxed">{item.alert}</p>
+                      {item.tickers?.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {item.tickers.map(t => (
+                            <span key={t} className="text-[9px] font-bold text-muted bg-surface2 border border-border px-1.5 py-0.5 rounded">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New Ideas */}
+        {intel.newIdeas?.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted mb-4">On The Radar</p>
+            <div className="space-y-2.5">
+              {intel.newIdeas.map((idea: NewIdea, i: number) => (
+                <div key={i} className="bg-surface border border-border rounded-xl p-4 shadow-card">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-black text-accent">{idea.ticker}</span>
+                    <span className="text-xs text-dim truncate">{idea.name}</span>
+                  </div>
+                  <p className="text-xs text-text2 leading-relaxed mb-2">{idea.thesis}</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {idea.catalyst && (
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-[9px] font-black text-[#0f766e] flex-shrink-0 mt-0.5">▲</span>
+                        <p className="text-[10px] text-dim">{idea.catalyst}</p>
+                      </div>
+                    )}
+                    {idea.risk && (
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-[9px] font-black text-[#dc2626] flex-shrink-0 mt-0.5">▼</span>
+                        <p className="text-[10px] text-dim">{idea.risk}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
 }
 
 // --- Category-based card theming ---
@@ -96,7 +383,7 @@ const IMPACT_BADGE: Record<string, string> = {
   low: 'bg-green-bg text-green-text border border-green-text/20',
 }
 
-export default function IntelligenceTab({ briefing, profile, loading, userTickers = [] }: IntelligenceTabProps) {
+export default function IntelligenceTab({ briefing, profile, loading, userTickers = [], holdings = [] }: IntelligenceTabProps) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-6">
@@ -157,6 +444,11 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
           </div>
         </div>
       </div>
+
+      {/* Portfolio Intelligence — only shown when user has holdings */}
+      {holdings.length > 0 && (
+        <PortfolioIntelligencePanel holdings={holdings} profile={profile} />
+      )}
 
       {/* Macro Banner */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] rounded-2xl px-8 py-7 text-white">

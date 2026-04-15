@@ -61,6 +61,46 @@ export interface Thesis {
   todayUpdate: string
 }
 
+export interface PortfolioSignal {
+  ticker: string
+  action: 'BUY' | 'ADD' | 'HOLD' | 'REDUCE' | 'SELL' | 'WATCH'
+  conviction: 'HIGH' | 'MEDIUM' | 'LOW'
+  timeframe: 'SHORT' | 'MEDIUM' | 'LONG'
+  headline: string
+  reasoning: string
+  catalyst: string
+}
+
+export interface MacroTheme {
+  title: string
+  chain: string          // Causal chain with → arrows
+  impact: 'BULLISH' | 'BEARISH' | 'MIXED'
+  affectedTickers: string[]
+  newIdea?: string
+}
+
+export interface WatchItem {
+  alert: string
+  urgency: 'HIGH' | 'MEDIUM' | 'LOW'
+  tickers: string[]
+}
+
+export interface NewIdea {
+  ticker: string
+  name: string
+  thesis: string
+  catalyst: string
+  risk: string
+}
+
+export interface PortfolioIntelligence {
+  portfolioSignals: PortfolioSignal[]
+  macroThemes: MacroTheme[]
+  watchItems: WatchItem[]
+  newIdeas: NewIdea[]
+  analystNote: string
+}
+
 export interface Briefing {
   id: string
   briefing_date: string
