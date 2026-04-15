@@ -261,7 +261,7 @@ function StockSparkline({
           options={{
             maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: {
-              callbacks: { label: (ctx) => `$${ctx.parsed.y.toFixed(2)}` }
+              callbacks: { label: (ctx) => `$${(ctx.parsed.y ?? 0).toFixed(2)}` }
             }},
             scales: {
               x: {
