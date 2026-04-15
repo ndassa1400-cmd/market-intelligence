@@ -39,6 +39,7 @@ export interface NewsCard {
   layer2: string
   layer3: string
   assetMap: string
+  searchQuery?: string
 }
 
 export interface Mover {

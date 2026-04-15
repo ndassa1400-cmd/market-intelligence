@@ -66,7 +66,8 @@ Return ONLY valid JSON with no markdown or code fences:
       "layer1": "USD strengthens, bond yields rise, equity valuations under pressure.",
       "layer2": "Companies refinancing debt face higher costs. Consumer spending may slow as mortgage rates adjust.",
       "layer3": "Economic growth moderates. Long-term bond yields rise, pressuring dividend and growth stocks.",
-      "assetMap": "USD Up, Bonds Down, Equities Mixed, Real Estate Down"
+      "assetMap": "USD Up, Bonds Down, Equities Mixed, Real Estate Down",
+      "searchQuery": "Federal Reserve interest rates 2026"
     }
   ],
   "movers": [
@@ -92,7 +93,7 @@ Return ONLY valid JSON with no markdown or code fences:
   "macroSummary": "Risk-off sentiment from Fed pricing. Tech holding up on AI strength. Commodities mixed on growth concerns."
 }
 
-Generate at least 8 news cards, 5-6 movers, and 5-6 theses.`
+Generate at least 8 news cards, 5-6 movers, and 5-6 theses. For every news card include a "searchQuery" field with 3-5 words that would find the real story on Google News (e.g. "Fed rate decision April 2026").`
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
