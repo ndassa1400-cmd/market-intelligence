@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -32,9 +32,8 @@ export async function GET(request: NextRequest) {
       )
       .join('\n---\n') || 'No prior briefings.'
 
-    // Generate briefing with Gemini
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    // Generate briefing with Groq
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
     const prompt = `You are a senior macro strategist at a top-tier global investment bank. Generate a complete daily market intelligence briefing as structured JSON.
 
@@ -54,7 +53,7 @@ Today is ${today}. Analyze:
 
 For each theme in prior briefings, explicitly note whether today's data STRENGTHENS, HOLDS, or WEAKENS the thesis.
 
-Return ONLY valid JSON matching this exact structure with no markdown or code fences:
+Return ONLY valid JSON with no markdown or code fences:
 {
   "displayDate": "April 15, 2026",
   "marketLevels": {"SP500": "5,234 (+0.8%)", "NASDAQ": "16,850 (+1.2%)", "NZX50": "12,340 (-0.2%)", "ASX200": "7,890 (+0.5%)", "BrentOil": "$92.50 (+1.2%)", "Gold": "$2,340 (-0.3%)", "Copper": "$4.12 (+0.8%)", "FedRate": "5.25-5.50%", "RBNZ": "5.50%", "RBA": "4.35%", "Bitcoin": "$63,200 (+2.1%)", "UST10Y": "4.15%"},
@@ -93,10 +92,16 @@ Return ONLY valid JSON matching this exact structure with no markdown or code fe
   "macroSummary": "Risk-off sentiment from Fed pricing. Tech holding up on AI strength. Commodities mixed on growth concerns."
 }
 
-Be thorough and analytically rigorous. Generate at least 8 news cards, 5-6 movers, and 5-6 theses.`
+Generate at least 8 news cards, 5-6 movers, and 5-6 theses.`
 
-    const result = await model.generateContent(prompt)
-    const responseText = result.response.text()
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 8000,
+      temperature: 0.7,
+    })
+
+    const responseText = completion.choices[0]?.message?.content || ''
 
     // Parse JSON from response
     let briefingContent
