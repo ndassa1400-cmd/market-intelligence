@@ -441,6 +441,25 @@ export default function PortfolioTab({
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set())
   const [yahooSectors, setYahooSectors] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Auto-fetch sectors for all holdings on mount (yahooSectors is lost on refresh)
+  const tickerKey = holdings.map(h => h.ticker).sort().join(',')
+  useEffect(() => {
+    if (!holdings.length) return
+    Promise.allSettled(
+      holdings.map(h =>
+        fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
+          .then(r => r.json())
+          .then((d: { sector?: string }) => ({ ticker: h.ticker, sector: d.sector || 'Other' }))
+          .catch(() => ({ ticker: h.ticker, sector: 'Other' }))
+      )
+    ).then(results => {
+      const map: Record<string, string> = {}
+      results.forEach(r => { if (r.status === 'fulfilled') map[r.value.ticker] = r.value.sector })
+      setYahooSectors(map)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickerKey])
   const [formData, setFormData] = useState({
     ticker: '', name: '', shares: '', buy_price: '', current_price: '',
     sector: 'Technology', currency: 'NZD',
