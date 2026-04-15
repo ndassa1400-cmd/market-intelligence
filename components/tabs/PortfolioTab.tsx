@@ -77,7 +77,21 @@ const TICKER_SECTORS: Record<string, string> = {
   UPS: 'Industrial',  FDX: 'Industrial',
   // ── US Materials / Commodities ────────────────────────────────────────────
   GLD: 'Materials',   SLV: 'Materials',   GOLD: 'Materials',
-  // ── ETFs ──────────────────────────────────────────────────────────────────
+  IAU: 'Materials',   // iShares Gold Trust
+  // ── US Energy ─────────────────────────────────────────────────────────────
+  GUSH: 'Energy',     // Direxion Daily S&P Oil & Gas
+  RNRG: 'Energy',     // Global X Renewable Energy
+  // ── US Industrial / Defence ───────────────────────────────────────────────
+  ITA: 'Industrial',  // iShares US Aerospace & Defense
+  RKLB: 'Technology', // Rocket Lab
+  // ── ASX ETFs ──────────────────────────────────────────────────────────────
+  ACDC: 'Materials',  // Global X Battery Tech & Lithium
+  WIRE: 'Materials',  // Global X Copper Miners
+  NDQ: 'Technology',  // BetaShares NASDAQ 100
+  // ── NZX ETFs & funds ──────────────────────────────────────────────────────
+  BOT: 'Technology',  // Smart Automation and Robotics ETF
+  TEM: 'Finance',     // Templeton Emerging Markets
+  // ── US ETFs ───────────────────────────────────────────────────────────────
   SPY: 'ETF',         QQQ: 'ETF',         VTI: 'ETF',
   IWM: 'ETF',         VOO: 'ETF',         VEA: 'ETF',
 }
@@ -506,7 +520,17 @@ export default function PortfolioTab({
   // Live prices from Yahoo Finance — overrides DB-stored current_price
   const [livePrices, setLivePrices] = useState<Record<string, number>>({})
   const [pricesLoading, setPricesLoading] = useState(true)
+  // FX rates → NZD (all portfolio values shown in NZD)
+  const [fxRates, setFxRates] = useState<Record<string, number>>({ USD: 1.72, AUD: 1.07, NZD: 1 })
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Fetch live FX rates once on mount
+  useEffect(() => {
+    fetch('/api/fx')
+      .then(r => r.json())
+      .then((rates: Record<string, number>) => setFxRates({ NZD: 1, ...rates }))
+      .catch(() => {})
+  }, [])
 
   // On mount, fetch live prices + sectors for all holdings from Yahoo Finance.
   // current_price in DB is set at import time (= buy price) — we need real market prices.
@@ -542,21 +566,26 @@ export default function PortfolioTab({
 
   // Get the best available price for a holding: live Yahoo price > DB price
   const getPrice = (h: Holding): number => livePrices[h.ticker] ?? h.current_price
+  // Convert a price in a holding's native currency to NZD
+  const toNZD = (price: number, currency: string): number => price * (fxRates[currency] ?? 1)
   const [formData, setFormData] = useState({
     ticker: '', name: '', shares: '', buy_price: '', current_price: '',
     sector: 'Technology', currency: 'NZD',
   })
 
-  // Recalculate metrics using live prices so value reflects today's market, not buy price
+  // Recalculate metrics using live prices, all converted to NZD.
+  // Without FX conversion, USD holdings (NVDA, XOM etc.) are ~72% understated
+  // and AUD holdings (NDQ, ACDC etc.) are ~7% understated vs NZD.
   const liveMetrics = (() => {
-    const totalValue = holdings.reduce((sum, h) => sum + getPrice(h) * h.shares, 0)
-    const costBasis  = holdings.reduce((sum, h) => sum + h.buy_price * h.shares, 0)
+    const totalValue = holdings.reduce((sum, h) => sum + toNZD(getPrice(h), h.currency) * h.shares, 0)
+    const costBasis  = holdings.reduce((sum, h) => sum + toNZD(h.buy_price, h.currency) * h.shares, 0)
     const totalPL = totalValue - costBasis
     const totalPLPercent = costBasis > 0 ? (totalPL / costBasis) * 100 : 0
     const holdingsPL = holdings.map(h => ({
       ticker: h.ticker,
+      // % gain is currency-neutral (same currency top and bottom)
       plPercent: h.buy_price > 0 ? ((getPrice(h) - h.buy_price) / h.buy_price) * 100 : 0,
-      value: getPrice(h) * h.shares,
+      value: toNZD(getPrice(h), h.currency) * h.shares,
     }))
     const best  = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent > b.plPercent ? a : b) : null
     const worst = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent < b.plPercent ? a : b) : null
@@ -652,13 +681,14 @@ export default function PortfolioTab({
 
   const holdingsWithPL = holdings.map(h => {
     const livePrice = getPrice(h)
+    const valueNZD = toNZD(livePrice, h.currency) * h.shares
     return {
       ...h,
       current_price: livePrice,
-      pl: (livePrice - h.buy_price) * h.shares,
+      pl: (toNZD(livePrice, h.currency) - toNZD(h.buy_price, h.currency)) * h.shares,
       plPercent: h.buy_price > 0 ? ((livePrice - h.buy_price) / h.buy_price) * 100 : 0,
       beta: STOCK_BETAS[h.ticker.toUpperCase()] ?? 1.0,
-      weight: liveMetrics.totalValue > 0 ? (livePrice * h.shares) / liveMetrics.totalValue * 100 : 0,
+      weight: liveMetrics.totalValue > 0 ? valueNZD / liveMetrics.totalValue * 100 : 0,
     }
   })
 
@@ -669,7 +699,7 @@ export default function PortfolioTab({
       yahooSectors[h.ticker] ||
       (h.sector && h.sector !== 'Other' ? h.sector : null) ||
       'Other'
-    return { sector, value: getPrice(h) * h.shares }
+    return { sector, value: toNZD(getPrice(h), h.currency) * h.shares }
   })
 
   const sectorAllocation = effectiveSectors.reduce((acc, h) => {
@@ -719,10 +749,10 @@ export default function PortfolioTab({
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <MetricCard
-          label="Total Value"
+          label="Total Value (NZD)"
           value={pricesLoading ? '...' : `$${liveMetrics.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
         />
-        <MetricCard label="Cost Basis" value={`$${liveMetrics.costBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+        <MetricCard label="Cost Basis (NZD)" value={`$${liveMetrics.costBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
         <MetricCard
           label="Unrealised P&L"
           value={pricesLoading ? '...' : `${liveMetrics.totalPL >= 0 ? '+' : ''}$${Math.abs(liveMetrics.totalPL).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
