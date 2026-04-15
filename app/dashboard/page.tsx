@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   try {
-    const [profileRes, holdingsRes, briefingRes] = await Promise.all([
+    const [profileRes, holdingsRes] = await Promise.all([
       supabase
         .from('profiles')
         .select('*')
@@ -25,12 +25,6 @@ export default async function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-      fetch(`https://market-intelligence-swart.vercel.app/api/briefing`, {
-        headers: {
-          'Authorization': `Bearer ${user.id}`,
-        },
-        cache: 'no-store',
-      }).then(r => r.json()).catch(() => null),
     ])
 
     const profile: Profile = profileRes.data || {
@@ -42,7 +36,7 @@ export default async function DashboardPage() {
     }
 
     const holdings: Holding[] = holdingsRes.data || []
-    const briefing: Briefing | null = briefingRes?.id ? briefingRes : null
+    const briefing: Briefing | null = null
 
     return (
       <DashboardClient

@@ -27,6 +27,23 @@ export default function DashboardClient({
   const [profile, setProfile] = useState<Profile>(initialProfile)
   const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
   const [loading, setLoading] = useState(false)
+  const [currentBriefing, setCurrentBriefing] = useState<Briefing | null>(briefing)
+  const [briefingLoading, setBriefingLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      try {
+        const res = await fetch('/api/briefing')
+        const data = await res.json()
+        if (data?.id) setCurrentBriefing(data)
+      } catch (e) {
+        console.error('Briefing fetch error:', e)
+      } finally {
+        setBriefingLoading(false)
+      }
+    }
+    fetchBriefing()
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -166,8 +183,9 @@ export default function DashboardClient({
         {/* Tab Content */}
         {activeTab === 'intelligence' ? (
           <IntelligenceTab
-            briefing={briefing}
+            briefing={currentBriefing}
             profile={profile}
+            loading={briefingLoading}
           />
         ) : (
           <PortfolioTab

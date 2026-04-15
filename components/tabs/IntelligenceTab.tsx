@@ -5,6 +5,7 @@ import { Profile, Briefing, NewsCard, Mover, Thesis } from '@/lib/types'
 interface IntelligenceTabProps {
   briefing: Briefing | null
   profile: Profile
+  loading?: boolean
 }
 
 const getImpactColor = (impact: string) => {
@@ -26,12 +27,21 @@ const getStrengthColor = (strength: string) => {
   }
 }
 
-export default function IntelligenceTab({ briefing, profile }: IntelligenceTabProps) {
+export default function IntelligenceTab({ briefing, profile, loading }: IntelligenceTabProps) {
+  if (loading) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted">Generating Briefing</p>
+        <p className="text-dim text-sm mt-3">Analysing global markets. This takes about 20 seconds on first load.</p>
+      </div>
+    )
+  }
+
   if (!briefing) {
     return (
-      <div className="text-center py-12">
-        <p className="text-dim text-lg">Generating today's briefing...</p>
-        <p className="text-muted text-sm mt-2">Please check back in a moment</p>
+      <div className="text-center py-20">
+        <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted">No Briefing Available</p>
+        <p className="text-dim text-sm mt-3">Refresh the page to try again.</p>
       </div>
     )
   }
