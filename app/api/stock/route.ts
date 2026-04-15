@@ -24,6 +24,44 @@ const SECTOR_MAP: Record<string, string> = {
   'Communication Services': 'Technology',
 }
 
+// Hardcoded fallback for NZX/ASX stocks that Yahoo doesn't return profile data for
+const REGIONAL_SECTOR_MAP: Record<string, { sector: string; industry: string }> = {
+  // NZX
+  AIR: { sector: 'Industrial', industry: 'Airlines' },
+  SPK: { sector: 'Technology', industry: 'Telecommunications' },
+  FPH: { sector: 'Healthcare', industry: 'Medical Devices' },
+  MEL: { sector: 'Utilities', industry: 'Electric Utilities' },
+  MCY: { sector: 'Utilities', industry: 'Electric Utilities' },
+  CEN: { sector: 'Utilities', industry: 'Renewable Energy' },
+  SKC: { sector: 'Consumer', industry: 'Casinos & Gaming' },
+  PCT: { sector: 'Real Estate', industry: 'REITs' },
+  ARG: { sector: 'Finance', industry: 'Asset Management' },
+  VHP: { sector: 'Healthcare', industry: 'Healthcare Services' },
+  GTK: { sector: 'Technology', industry: 'Software' },
+  EBO: { sector: 'Healthcare', industry: 'Pharmaceuticals' },
+  SCL: { sector: 'Consumer', industry: 'Food & Beverages' },
+  NZR: { sector: 'Energy', industry: 'Oil & Gas Refining' },
+  WHS: { sector: 'Consumer', industry: 'Retail' },
+  RBD: { sector: 'Consumer', industry: 'Restaurants' },
+  MFT: { sector: 'Finance', industry: 'Freight & Logistics' },
+  // ASX
+  BHP: { sector: 'Materials', industry: 'Diversified Metals & Mining' },
+  CBA: { sector: 'Finance', industry: 'Banking' },
+  ANZ: { sector: 'Finance', industry: 'Banking' },
+  WBC: { sector: 'Finance', industry: 'Banking' },
+  NAB: { sector: 'Finance', industry: 'Banking' },
+  RIO: { sector: 'Materials', industry: 'Diversified Metals & Mining' },
+  WES: { sector: 'Consumer', industry: 'Retail' },
+  CSL: { sector: 'Healthcare', industry: 'Biotechnology' },
+  MQG: { sector: 'Finance', industry: 'Investment Banking' },
+  WDS: { sector: 'Energy', industry: 'Oil & Gas' },
+  GMG: { sector: 'Real Estate', industry: 'Real Estate' },
+  TLS: { sector: 'Technology', industry: 'Telecommunications' },
+  FMG: { sector: 'Materials', industry: 'Iron Ore Mining' },
+  TCL: { sector: 'Industrial', industry: 'Toll Roads' },
+  REA: { sector: 'Technology', industry: 'Online Classifieds' },
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const ticker = searchParams.get('ticker')
@@ -85,6 +123,37 @@ export async function GET(req: NextRequest) {
       }
       if (price?.regularMarketPrice?.raw) {
         currentPrice = price.regularMarketPrice.raw
+      }
+    }
+
+    // Fallback: if sector still unknown and ticker has a suffix, try quoteSummary
+    // without the suffix (some NZX/ASX companies are indexed under base ticker)
+    if (sector === 'Other' && yahooTicker !== ticker) {
+      try {
+        const fallbackQuoteRes = await fetch(
+          `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=assetProfile`,
+          { headers }
+        )
+        if (fallbackQuoteRes.ok) {
+          const fqd = await fallbackQuoteRes.json()
+          const fp = fqd?.quoteSummary?.result?.[0]?.assetProfile
+          if (fp?.sector) {
+            sector = SECTOR_MAP[fp.sector] || fp.sector
+          }
+          if (fp?.industry && !industry) {
+            industry = fp.industry
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Last resort: use our hardcoded regional sector map for known NZX/ASX tickers
+    if (sector === 'Other') {
+      const baseTicker = ticker.toUpperCase().split('.')[0]
+      const regional = REGIONAL_SECTOR_MAP[baseTicker]
+      if (regional) {
+        sector = regional.sector
+        if (!industry) industry = regional.industry
       }
     }
 

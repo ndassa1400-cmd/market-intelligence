@@ -157,17 +157,45 @@ function PortfolioHistoryChart({ holdings }: { holdings: Holding[] }) {
           .catch(() => ({ shares: h.shares, prices: [] as { date: string; close: number }[] }))
       )
     ).then(results => {
-      const valueMap: Record<string, number> = {}
-      results.forEach(r => {
-        if (r.status !== 'fulfilled') return
-        r.value.prices.forEach(({ date, close }) => {
-          valueMap[date] = (valueMap[date] ?? 0) + r.value.shares * close
-        })
-      })
-      const sorted = Object.entries(valueMap)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, value]) => ({ date, value }))
-      setData(sorted)
+      // Build per-stock price maps for carry-forward interpolation.
+      // Different markets (NZX, ASX, NYSE) trade on different days, so a naive
+      // date-union sum creates wild oscillation. Carry-forward fills gaps with
+      // the last known closing price so every stock has a value on every date.
+      const stockMaps = results
+        .filter((r): r is PromiseFulfilledResult<{ shares: number; prices: { date: string; close: number }[] }> =>
+          r.status === 'fulfilled' && r.value.prices.length > 0)
+        .map(r => ({
+          shares: r.value.shares,
+          priceMap: Object.fromEntries(r.value.prices.map(p => [p.date, p.close])) as Record<string, number>,
+          sortedDates: r.value.prices.map(p => p.date).sort(),
+        }))
+
+      if (!stockMaps.length) { setLoading(false); return }
+
+      // Union of all trading dates across all markets
+      const allDates = [...new Set(stockMaps.flatMap(s => s.sortedDates))].sort()
+
+      // For each date, sum (shares × carry-forward price) across all stocks
+      const series = allDates.map(date => {
+        let total = 0
+        for (const { shares, priceMap, sortedDates } of stockMaps) {
+          if (priceMap[date] !== undefined) {
+            total += shares * priceMap[date]
+          } else {
+            // Carry-forward: use the most recent available price before this date
+            const prev = sortedDates.filter(d => d < date).pop()
+            if (prev !== undefined) {
+              total += shares * priceMap[prev]
+            } else {
+              // This stock has no history yet at this date — skip the whole date
+              return null
+            }
+          }
+        }
+        return { date, value: total }
+      }).filter((d): d is { date: string; value: number } => d !== null)
+
+      setData(series)
       setLoading(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -159,11 +159,11 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
       </div>
 
       {/* Macro Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1714] to-[#2e2420] rounded-2xl px-8 py-7 text-white">
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/[0.03]" />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/[0.03]" />
-        <p className="text-xs font-bold tracking-[0.25em] uppercase opacity-50 mb-3">Macro Summary</p>
-        <p className="text-base leading-relaxed opacity-90 max-w-3xl font-medium">{content.macroSummary}</p>
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] rounded-2xl px-8 py-7 text-white">
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10" />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10" />
+        <p className="text-xs font-bold tracking-[0.25em] uppercase text-white/60 mb-3">Macro Summary</p>
+        <p className="text-base leading-relaxed text-white/95 max-w-3xl font-medium">{content.macroSummary}</p>
       </div>
 
       {/* Market Levels */}
