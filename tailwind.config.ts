@@ -8,15 +8,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#f7f5f2',
+        // Warm beige base — inspired by editorial/organic design
+        bg: '#faf7f4',
         surface: '#ffffff',
-        surface2: '#f0ede8',
-        border: '#e4e0da',
-        border2: '#ccc8c0',
-        text: '#0f0f0f',
-        text2: '#2d2d2d',
-        dim: '#6b6b6b',
-        muted: '#a0a0a0',
+        surface2: '#f4f0eb',
+        surface3: '#ede8e1',
+        border: '#e8e3db',
+        border2: '#d4cec5',
+        text: '#1a1714',
+        text2: '#2e2b27',
+        dim: '#6b6560',
+        muted: '#a09890',
+
+        // Warm rose/mocha accent (from the design inspo)
+        rose: '#c4756a',
+        'rose-bg': '#fdf0ee',
+        'rose-text': '#a85c52',
+        mocha: '#8b6f5e',
+        'mocha-bg': '#f5ede8',
+        'mocha-text': '#6b5045',
 
         // Semantic
         green: '#166534',
@@ -31,8 +41,10 @@ const config: Config = {
         blue: '#1e40af',
         'blue-bg': '#dbeafe',
         'blue-text': '#2563eb',
+
+        // Primary accent — indigo, slightly warmed
         accent: '#6366f1',
-        'accent-bg': '#eef2ff',
+        'accent-bg': '#eef0ff',
         'accent-text': '#4f46e5',
 
         // Pastel palette for stocks and cards
@@ -58,7 +70,17 @@ const config: Config = {
         'pastel-10t': '#3f6212',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-space-grotesk)', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        card: '16px',
+        pill: '999px',
+      },
+      boxShadow: {
+        card: '0 1px 4px 0 rgba(26,23,20,0.06), 0 4px 16px 0 rgba(26,23,20,0.04)',
+        'card-hover': '0 4px 12px 0 rgba(26,23,20,0.10), 0 8px 32px 0 rgba(26,23,20,0.06)',
+        soft: '0 2px 8px 0 rgba(26,23,20,0.08)',
       },
     },
   },

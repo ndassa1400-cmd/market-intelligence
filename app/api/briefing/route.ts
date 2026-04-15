@@ -28,60 +28,66 @@ export async function GET(request: NextRequest) {
     const historyContext = recentBriefings
       ?.map(
         (b: any) =>
-          `Date: ${b.content.displayDate}\nTheses: ${JSON.stringify(b.content.theses)}`
+          `Date: ${b.content.displayDate}\nMacro: ${b.content.macroSummary}\nTop headlines: ${b.content.newsCards?.slice(0,4).map((c: any) => c.headline).join(' | ')}\nTheses: ${JSON.stringify(b.content.theses)}`
       )
       .join('\n---\n') || 'No prior briefings.'
 
     // Generate briefing with Groq
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const prompt = `You are a senior macro strategist at a top-tier global investment bank who also tracks world events with the eye of a seasoned journalist. Generate a complete daily briefing as structured JSON — covering BOTH financial markets AND major world news. Think Bloomberg meets Reuters meets The Economist.
+    const prompt = `You are a senior macro strategist at a top-tier global investment bank. Your job is to write a daily briefing that reads like the front page of a financial newspaper — big stories, clear market angles, and a strong sense of how today's news builds on yesterday's. Think Bloomberg Terminal meets The Economist's briefing page.
 
-Prior briefings context:
+PRIOR BRIEFINGS (use this to track story continuity — note how themes evolve):
 ${historyContext}
 
-Today is ${today}. Cover ALL of the following — do not skip non-financial stories:
+Today is ${today}.
 
-FINANCIAL MARKETS:
-1. Overnight equity market moves (S&P 500, NASDAQ, NZX 50, ASX 200, Europe)
-2. Central bank news (Fed, RBNZ, RBA, ECB, BoJ) — rate decisions, minutes, speeches
-3. Commodity moves (oil WTI/Brent, gold, copper, lithium, wheat, natural gas)
-4. Tech/AI earnings, semiconductor supply chains, AI capex announcements
-5. Crypto market overview (BTC, ETH, regulatory news)
-6. Banking, M&A, IPO activity
+INSTRUCTIONS:
+1. NARRATIVE CONTINUITY is critical. Reference prior headlines where relevant. If Iran talks were ongoing yesterday, report where they stand today. If a tanker was diverted, follow it. If Trump made a statement last week, note the follow-through. Stories should build — not start fresh every day.
+2. Use BOLD, newspaper-style headlines. Not "Fed Discusses Rates" — write "Fed Signals Rates on Hold Until 2027 as Inflation Stalls" or "Three Oil Tankers Rerouted as Houthis Resume Red Sea Attacks". Make them vivid and specific.
+3. Assign each news card a TAG that reflects the category. Tags must be one of: Politics, Geopolitics, Energy, Technology, Markets, Healthcare, Crypto, Climate, Trade, Central Banks, Earnings, China, Commodities, Defence, Culture.
+4. Group related stories — if you have 2-3 oil stories, tag them all "Energy" so they cluster into a narrative.
+5. HALF of your news cards must be non-financial world news. Cover Trump, peace talks, tanker movements, supply chain disruptions, climate events.
 
-WORLD NEWS (with market angle — these are MANDATORY, include every category):
-7. US politics — Trump statements, social media posts, executive orders, tariffs, political drama. Even Trump posting a picture has market implications. Cover it.
-8. Peace talks, wars, ceasefires — Iran nuclear talks, Russia-Ukraine negotiations, Middle East ceasefires, Israel-Gaza, any peace deal or escalation
-9. Trade routes and supply chains — oil tankers, container ships, Suez Canal, Red Sea, Panama Canal, port strikes, sanctions on shipping
-10. Energy — OPEC meetings, Saudi Arabia production, Iranian oil exports, LNG cargos, gas pipeline politics, oil price moves
-11. China — economy, Taiwan tensions, trade with US, manufacturing data, property crisis, export controls
-12. Climate and natural disasters — flooding, droughts, earthquakes, wildfires affecting agriculture or infrastructure
-13. Big cultural and social moments — sporting events, celebrity influence on markets, viral consumer trends, social media movements
-14. Space and technology breakthroughs — rocket launches, AI announcements, biotech discoveries, defence tech
+MANDATORY STORY CATEGORIES (include at least one card each):
+- US Politics: Trump executive orders, statements, tariffs, political drama
+- Geopolitics: Wars, peace talks, Iran nuclear deal, Russia-Ukraine, Middle East
+- Energy: Oil tankers, OPEC, LNG, supply disruptions, Saudi Arabia
+- Technology/AI: Chip wars, AI announcements, semiconductor supply chains
+- Markets: Fed, equities, rate decisions, earnings
+- China: Taiwan, trade, economy, manufacturing
+- Commodities: Gold, copper, wheat, natural gas
 
-CRITICAL: For every news card, include a "tickers" array listing which stock tickers from common indices are most affected by this story (e.g. ["XOM", "CVX"] for oil news, ["NVDA", "AMD"] for AI news, ["GLD"] for geopolitical tension). Leave as empty array [] if no specific stocks are affected.
+For EVERY news card:
+- headline: Bold, vivid, newspaper-quality (not bland — make it compelling)
+- what: 1-2 sentences summarising what happened and why it matters
+- layer1: 0-4 week market impact — be specific about price direction
+- layer2: 1-6 month outlook — sector and macro implications
+- layer3: 6-24 month structural view — how this reshapes the investment landscape
+- assetMap: Which assets move, in which direction (e.g. "Oil Up, USD Strengthens, EM Currencies Weaken")
+- searchQuery: 4-6 word Google News search to find this story
+- tickers: Array of affected stock symbols (["XOM", "CVX"] for oil, ["NVDA"] for AI, etc.)
 
-For each news card, explain the MARKET ANGLE explicitly — even for non-financial stories. Trump posting on social media, a tanker diversion, a drought in key wheat-growing regions — all of these move markets. Be direct about which way prices move and why.
+For theses:
+- Reference prior briefing context — if "AI Infrastructure Supercycle" was Strengthening last week, note today's update specifically
+- todayUpdate must be a concrete 1-2 sentence update (not generic)
 
-For each theme in prior briefings, explicitly note whether today's data STRENGTHENS, HOLDS, or WEAKENS the thesis.
-
-Return ONLY valid JSON with no markdown or code fences:
+Return ONLY valid JSON (no markdown, no code fences):
 {
   "displayDate": "April 15, 2026",
   "marketLevels": {"SP500": "5,234 (+0.8%)", "NASDAQ": "16,850 (+1.2%)", "NZX50": "12,340 (-0.2%)", "ASX200": "7,890 (+0.5%)", "BrentOil": "$92.50 (+1.2%)", "Gold": "$2,340 (-0.3%)", "Copper": "$4.12 (+0.8%)", "FedRate": "5.25-5.50%", "RBNZ": "5.50%", "RBA": "4.35%", "Bitcoin": "$63,200 (+2.1%)", "UST10Y": "4.15%"},
   "newsCards": [
     {
-      "tag": "Federal Reserve",
+      "tag": "Politics",
       "impact": "high",
-      "headline": "Fed Signals Patience on Rate Cuts",
-      "what": "Fed chair comments suggest rates will remain higher for longer than previously expected.",
-      "layer1": "USD strengthens, bond yields rise, equity valuations under pressure.",
-      "layer2": "Companies refinancing debt face higher costs. Consumer spending may slow as mortgage rates adjust.",
-      "layer3": "Economic growth moderates. Long-term bond yields rise, pressuring dividend and growth stocks.",
-      "assetMap": "USD Up, Bonds Down, Equities Mixed, Real Estate Down",
-      "searchQuery": "Federal Reserve interest rates 2026",
-      "tickers": ["JPM", "BAC", "TLT"]
+      "headline": "Trump Signs Executive Order Imposing 25% Tariffs on EU Auto Imports",
+      "what": "The White House announced sweeping tariffs on European vehicles, citing national security concerns. EU officials warn of immediate retaliation targeting US agricultural exports.",
+      "layer1": "Auto stocks (GM, F, STLA) sell off. EUR/USD weakens on trade war fears. Safe havens (gold, JPY) bid up.",
+      "layer2": "Supply chain restructuring accelerates. US auto production costs rise. European exporters redirect to Asia.",
+      "layer3": "WTO credibility further undermined. Structural shift toward bilateral trade blocs accelerates.",
+      "assetMap": "EUR Down, Gold Up, US Auto Stocks Down, EU Exporters Down",
+      "searchQuery": "Trump tariffs European auto imports",
+      "tickers": ["GM", "F", "GLD", "TM"]
     }
   ],
   "movers": [
@@ -89,9 +95,9 @@ Return ONLY valid JSON with no markdown or code fences:
       "ticker": "NVDA",
       "exchange": "NASDAQ",
       "sector": "Technology",
-      "catalyst": "AI capex cycle acceleration",
-      "why": "Enterprise AI investment surging",
-      "risk": "Valuation compression if growth slows",
+      "catalyst": "Microsoft announces $10B AI infrastructure deal",
+      "why": "Confirms sustained GPU demand for hyperscaler AI buildout through 2027",
+      "risk": "Antitrust scrutiny on AI monopoly formation could pressure multiple",
       "conviction": 8,
       "accessible": "Yes"
     }
@@ -100,14 +106,14 @@ Return ONLY valid JSON with no markdown or code fences:
     {
       "name": "AI Infrastructure Supercycle",
       "strength": "Strengthening",
-      "body": "Semiconductor and data center capex accelerating globally. GPU demand outpacing supply. Long-term structural driver of technology sector outperformance.",
-      "todayUpdate": "New enterprise AI contracts announced. Reinforces structural demand outlook for semiconductors."
+      "body": "Hyperscaler capex commitments are locking in GPU demand years into the future. Supply constraints on advanced chips persist.",
+      "todayUpdate": "Microsoft's $10B AI deal and Google's new data centre announcement confirm the capex cycle is accelerating, not plateauing."
     }
   ],
-  "macroSummary": "Risk-off sentiment from Fed pricing. Tech holding up on AI strength. Commodities mixed on growth concerns."
+  "macroSummary": "Tariff escalation dominates risk sentiment today. Tech resilient on AI demand. Energy bid as tanker rerouting tightens Red Sea supply."
 }
 
-Generate at least 14 news cards — HALF must be world/political/geopolitical news (not just financial markets). Include peace talks if ongoing, Trump social media activity, tanker movements, supply chain disruptions, climate events, cultural moments. 5-6 movers, 5-6 theses. Every news card needs "searchQuery" (4-6 words for Google News) and "tickers" array (affected stock symbols, empty array if none).`
+Generate exactly 16 news cards (8 world/political, 8 financial), 5-6 movers, 5-6 theses. Every headline should be bold and specific — a reader should understand the story from the headline alone.`
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
