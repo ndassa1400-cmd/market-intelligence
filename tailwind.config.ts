@@ -16,9 +16,9 @@ const config: Config = {
         border: '#e8e3db',
         border2: '#d4cec5',
         text: '#1a1714',
-        text2: '#2e2b27',
-        dim: '#6b6560',
-        muted: '#a09890',
+        text2: '#322d29',
+        dim: '#5a5450',
+        muted: '#8a8078',
 
         // Warm rose/mocha accent (from the design inspo)
         rose: '#c4756a',
