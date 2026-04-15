@@ -25,11 +25,12 @@ export default async function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/briefing`, {
+      fetch(`https://market-intelligence-swart.vercel.app/api/briefing`, {
         headers: {
           'Authorization': `Bearer ${user.id}`,
         },
-      }).then(r => r.json()),
+        cache: 'no-store',
+      }).then(r => r.json()).catch(() => null),
     ])
 
     const profile: Profile = profileRes.data || {

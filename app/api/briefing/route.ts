@@ -94,7 +94,7 @@ Return ONLY valid JSON matching this exact structure:
 Be thorough and analytically rigorous. Generate at least 8 news cards, 5-6 movers, and 5-6 theses.`
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       messages: [
         {
