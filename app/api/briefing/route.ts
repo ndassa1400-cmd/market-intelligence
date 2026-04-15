@@ -50,17 +50,19 @@ FINANCIAL MARKETS:
 5. Crypto market overview (BTC, ETH, regulatory news)
 6. Banking, M&A, IPO activity
 
-WORLD NEWS (with market angle):
-7. US politics — Trump statements, executive orders, tariffs, social media posts and what they signal
-8. Geopolitics — Middle East, Russia-Ukraine, China-Taiwan, South China Sea, sanctions
-9. Trade and supply chain — shipping routes, tanker movements, port disruptions, tariff impacts
-10. Energy security — OPEC decisions, pipeline politics, LNG flows, refinery capacity
-11. Climate/weather events with economic impact — floods, droughts, hurricanes affecting crops or infrastructure
-12. Big cultural/social moments that move markets — sports events, viral stories, consumer sentiment shifts
-13. Global health — pandemics, drug approvals, healthcare policy
-14. Space, tech breakthroughs, scientific discoveries with commercial implications
+WORLD NEWS (with market angle — these are MANDATORY, include every category):
+7. US politics — Trump statements, social media posts, executive orders, tariffs, political drama. Even Trump posting a picture has market implications. Cover it.
+8. Peace talks, wars, ceasefires — Iran nuclear talks, Russia-Ukraine negotiations, Middle East ceasefires, Israel-Gaza, any peace deal or escalation
+9. Trade routes and supply chains — oil tankers, container ships, Suez Canal, Red Sea, Panama Canal, port strikes, sanctions on shipping
+10. Energy — OPEC meetings, Saudi Arabia production, Iranian oil exports, LNG cargos, gas pipeline politics, oil price moves
+11. China — economy, Taiwan tensions, trade with US, manufacturing data, property crisis, export controls
+12. Climate and natural disasters — flooding, droughts, earthquakes, wildfires affecting agriculture or infrastructure
+13. Big cultural and social moments — sporting events, celebrity influence on markets, viral consumer trends, social media movements
+14. Space and technology breakthroughs — rocket launches, AI announcements, biotech discoveries, defence tech
 
-For each news card, explain the MARKET ANGLE — even for non-financial stories. Trump posting on social media, a tanker diversion, a drought in key wheat-growing regions — all of these move markets. Explain how and why.
+CRITICAL: For every news card, include a "tickers" array listing which stock tickers from common indices are most affected by this story (e.g. ["XOM", "CVX"] for oil news, ["NVDA", "AMD"] for AI news, ["GLD"] for geopolitical tension). Leave as empty array [] if no specific stocks are affected.
+
+For each news card, explain the MARKET ANGLE explicitly — even for non-financial stories. Trump posting on social media, a tanker diversion, a drought in key wheat-growing regions — all of these move markets. Be direct about which way prices move and why.
 
 For each theme in prior briefings, explicitly note whether today's data STRENGTHENS, HOLDS, or WEAKENS the thesis.
 
@@ -78,7 +80,8 @@ Return ONLY valid JSON with no markdown or code fences:
       "layer2": "Companies refinancing debt face higher costs. Consumer spending may slow as mortgage rates adjust.",
       "layer3": "Economic growth moderates. Long-term bond yields rise, pressuring dividend and growth stocks.",
       "assetMap": "USD Up, Bonds Down, Equities Mixed, Real Estate Down",
-      "searchQuery": "Federal Reserve interest rates 2026"
+      "searchQuery": "Federal Reserve interest rates 2026",
+      "tickers": ["JPM", "BAC", "TLT"]
     }
   ],
   "movers": [
@@ -104,7 +107,7 @@ Return ONLY valid JSON with no markdown or code fences:
   "macroSummary": "Risk-off sentiment from Fed pricing. Tech holding up on AI strength. Commodities mixed on growth concerns."
 }
 
-Generate at least 12 news cards (mix of financial AND world news — politics, geopolitics, supply chain, culture, climate), 5-6 movers, and 5-6 theses. For every news card include a "searchQuery" field with 4-6 words to find the real story on Google News (e.g. "Trump tariffs China April 2026", "oil tankers Red Sea 2026").`
+Generate at least 14 news cards — HALF must be world/political/geopolitical news (not just financial markets). Include peace talks if ongoing, Trump social media activity, tanker movements, supply chain disruptions, climate events, cultural moments. 5-6 movers, 5-6 theses. Every news card needs "searchQuery" (4-6 words for Google News) and "tickers" array (affected stock symbols, empty array if none).`
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',

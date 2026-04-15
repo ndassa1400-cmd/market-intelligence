@@ -36,9 +36,12 @@ const SECTOR_COLORS = [
   '#0891b2', '#db2777', '#65a30d', '#ea580c', '#6366f1',
 ]
 
+import { Briefing } from '@/lib/types'
+
 interface PortfolioTabProps {
   profile: Profile
   holdings: Holding[]
+  briefing?: Briefing | null
   metrics: {
     totalValue: number
     costBasis: number
@@ -133,9 +136,28 @@ function parseSharesiesCSV(text: string): Array<Omit<Holding, 'id' | 'user_id' |
     }))
 }
 
+const PASTEL_PALETTE = [
+  { bg: '#fce7f3', text: '#be185d', border: '#f9a8d4' },
+  { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+  { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  { bg: '#fef3c7', text: '#b45309', border: '#fcd34d' },
+  { bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe' },
+  { bg: '#ccfbf1', text: '#0f766e', border: '#5eead4' },
+  { bg: '#ffedd5', text: '#c2410c', border: '#fdba74' },
+  { bg: '#e0e7ff', text: '#3730a3', border: '#a5b4fc' },
+  { bg: '#fdf2f8', text: '#9d174d', border: '#f0abfc' },
+  { bg: '#ecfccb', text: '#3f6212', border: '#bef264' },
+]
+
+function getStockColor(ticker: string, allTickers: string[]) {
+  const idx = allTickers.indexOf(ticker)
+  return PASTEL_PALETTE[idx % PASTEL_PALETTE.length]
+}
+
 export default function PortfolioTab({
   profile,
   holdings,
+  briefing,
   metrics,
   onAddHolding,
   onDeleteHolding,
@@ -158,6 +180,13 @@ export default function PortfolioTab({
 
   const portfolioBeta = calcPortfolioBeta(holdings, metrics.totalValue)
   const diversification = calcDiversification(holdings, metrics.totalValue)
+  const allTickers = holdings.map(h => h.ticker)
+
+  // News signals affecting user's holdings
+  const newsSignals = briefing?.content.newsCards
+    .filter(c => c.tickers && c.tickers.some(t => allTickers.includes(t)))
+    .map(c => ({ ...c, affected: c.tickers!.filter(t => allTickers.includes(t)) }))
+    .slice(0, 6) || []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -221,9 +250,9 @@ export default function PortfolioTab({
     labels: sectorAllocation.map(s => s.sector),
     datasets: [{
       data: sectorAllocation.map(s => s.value),
-      backgroundColor: SECTOR_COLORS.slice(0, sectorAllocation.length),
-      borderColor: '#f4f3ef',
-      borderWidth: 3,
+      backgroundColor: PASTEL_PALETTE.slice(0, sectorAllocation.length).map(p => p.bg),
+      borderColor: PASTEL_PALETTE.slice(0, sectorAllocation.length).map(p => p.border),
+      borderWidth: 2,
     }],
   }
 
@@ -396,9 +425,47 @@ export default function PortfolioTab({
         </div>
       )}
 
+      {/* News Signals */}
+      {newsSignals.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold tracking-[0.15em] uppercase text-accent mb-4">
+            World Events Affecting Your Portfolio
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {newsSignals.map((signal, idx) => {
+              const impactColors: Record<string, string> = {
+                high: 'border-l-red-text bg-red-bg/30',
+                medium: 'border-l-amber-text bg-amber-bg/30',
+                low: 'border-l-green-text bg-green-bg/30',
+              }
+              return (
+                <div key={idx} className={`rounded-[10px] border border-border border-l-4 p-4 ${impactColors[signal.impact] || ''}`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-xs font-bold text-text2 uppercase tracking-wide">{signal.tag}</span>
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      {signal.affected.map(t => {
+                        const color = getStockColor(t, allTickers)
+                        return (
+                          <span key={t} style={{ backgroundColor: color.bg, color: color.text, borderColor: color.border }}
+                            className="text-xs px-2 py-0.5 rounded font-bold border">
+                            {t}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-text leading-snug mb-1">{signal.headline}</p>
+                  <p className="text-xs text-dim leading-relaxed">{signal.layer1}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Holdings Table */}
       <div>
-        <h3 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted mb-4">Holdings</h3>
+        <h3 className="text-xs font-bold tracking-[0.15em] uppercase text-muted mb-4">Holdings</h3>
         <div className="bg-surface border border-border rounded-[10px] overflow-hidden">
           {holdings.length === 0 ? (
             <div className="text-center py-16">
@@ -423,8 +490,18 @@ export default function PortfolioTab({
                     return (
                       <tr key={holding.ticker} className="border-b border-border last:border-0 hover:bg-surface2 transition-colors">
                         <td className="px-4 py-4">
-                          <p className="font-bold text-text">{holding.ticker}</p>
-                          <p className="text-xs text-muted truncate max-w-[120px]">{holding.name}</p>
+                          {(() => {
+                            const color = getStockColor(holding.ticker, allTickers)
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span style={{ backgroundColor: color.bg, color: color.text, borderColor: color.border }}
+                                  className="text-xs font-black px-2 py-1 rounded-md border min-w-[52px] text-center">
+                                  {holding.ticker}
+                                </span>
+                                <p className="text-xs text-muted truncate max-w-[100px] hidden sm:block">{holding.name}</p>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">

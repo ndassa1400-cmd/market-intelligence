@@ -40,6 +40,7 @@ export interface NewsCard {
   layer3: string
   assetMap: string
   searchQuery?: string
+  tickers?: string[]
 }
 
 export interface Mover {

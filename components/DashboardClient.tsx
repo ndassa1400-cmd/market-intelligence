@@ -186,11 +186,13 @@ export default function DashboardClient({
             briefing={currentBriefing}
             profile={profile}
             loading={briefingLoading}
+            userTickers={holdings.map(h => h.ticker)}
           />
         ) : (
           <PortfolioTab
             profile={profile}
             holdings={holdings}
+            briefing={currentBriefing}
             metrics={metrics}
             onAddHolding={handleAddHolding}
             onDeleteHolding={handleDeleteHolding}
