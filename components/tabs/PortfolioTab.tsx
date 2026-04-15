@@ -18,6 +18,70 @@ import {
 
 ChartJS.register(ArcElement, BarElement, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend, Filler)
 
+// Client-side sector map — covers NZX, ASX, and major US stocks.
+// This is the primary source: no API call needed, works instantly.
+const TICKER_SECTORS: Record<string, string> = {
+  // ── NZX ──────────────────────────────────────────────────────────────────
+  AIR: 'Industrial',   SPK: 'Technology',  FPH: 'Healthcare',
+  MEL: 'Utilities',   MCY: 'Utilities',   CEN: 'Utilities',
+  SKC: 'Consumer',    PCT: 'Real Estate', ARG: 'Finance',
+  VHP: 'Healthcare',  GTK: 'Technology',  EBO: 'Healthcare',
+  SCL: 'Consumer',    NZR: 'Energy',      WHS: 'Consumer',
+  RBD: 'Consumer',    MFT: 'Industrial',  KMD: 'Consumer',
+  ATM: 'Consumer',    IFT: 'Finance',     SUM: 'Healthcare',
+  OCA: 'Healthcare',  RYM: 'Healthcare',  HLG: 'Industrial',
+  PFI: 'Real Estate', GMT: 'Real Estate', NPH: 'Healthcare',
+  NZM: 'Real Estate', AIA: 'Industrial',  SKT: 'Technology',
+  THL: 'Consumer',    MHJ: 'Consumer',    CVT: 'Materials',
+  // ── ASX ──────────────────────────────────────────────────────────────────
+  BHP: 'Materials',   CBA: 'Finance',     ANZ: 'Finance',
+  WBC: 'Finance',     NAB: 'Finance',     RIO: 'Materials',
+  WES: 'Consumer',    CSL: 'Healthcare',  MQG: 'Finance',
+  WDS: 'Energy',      GMG: 'Real Estate', TLS: 'Technology',
+  FMG: 'Materials',   TCL: 'Industrial',  REA: 'Technology',
+  COL: 'Consumer',    WOW: 'Consumer',    NCM: 'Materials',
+  ALL: 'Technology',  APA: 'Utilities',   ASX: 'Finance',
+  MIN: 'Materials',   ORG: 'Energy',      STO: 'Energy',
+  WTC: 'Technology',  XRO: 'Technology',  APX: 'Technology',
+  // ── US Technology ─────────────────────────────────────────────────────────
+  AAPL: 'Technology', MSFT: 'Technology', GOOGL: 'Technology',
+  GOOG: 'Technology', META: 'Technology', NVDA: 'Technology',
+  AMD: 'Technology',  INTC: 'Technology', AVGO: 'Technology',
+  TSM: 'Technology',  MU: 'Technology',   QCOM: 'Technology',
+  ORCL: 'Technology', CRM: 'Technology',  ADBE: 'Technology',
+  NOW: 'Technology',  SNOW: 'Technology', PLTR: 'Technology',
+  NFLX: 'Technology', SPOT: 'Technology', UBER: 'Technology',
+  LYFT: 'Technology', ABNB: 'Technology', NET: 'Technology',
+  DDOG: 'Technology', ZM: 'Technology',   TWLO: 'Technology',
+  // ── US Finance ────────────────────────────────────────────────────────────
+  JPM: 'Finance',     GS: 'Finance',      MS: 'Finance',
+  BAC: 'Finance',     C: 'Finance',       WFC: 'Finance',
+  BLK: 'Finance',     V: 'Finance',       MA: 'Finance',
+  PYPL: 'Finance',    SQ: 'Finance',      COIN: 'Finance',
+  AXP: 'Finance',     SCHW: 'Finance',    BRK: 'Finance',
+  // ── US Consumer ───────────────────────────────────────────────────────────
+  AMZN: 'Consumer',   TSLA: 'Consumer',   WMT: 'Consumer',
+  COST: 'Consumer',   TGT: 'Consumer',    NKE: 'Consumer',
+  SBUX: 'Consumer',   MCD: 'Consumer',    DIS: 'Consumer',
+  HD: 'Consumer',     LOW: 'Consumer',    BABA: 'Consumer',
+  // ── US Healthcare ─────────────────────────────────────────────────────────
+  JNJ: 'Healthcare',  PFE: 'Healthcare',  UNH: 'Healthcare',
+  ABBV: 'Healthcare', MRK: 'Healthcare',  LLY: 'Healthcare',
+  BMY: 'Healthcare',  AMGN: 'Healthcare', GILD: 'Healthcare',
+  // ── US Energy ─────────────────────────────────────────────────────────────
+  XOM: 'Energy',      CVX: 'Energy',      COP: 'Energy',
+  USO: 'Energy',      SLB: 'Energy',
+  // ── US Industrial ─────────────────────────────────────────────────────────
+  BA: 'Industrial',   CAT: 'Industrial',  GE: 'Industrial',
+  HON: 'Industrial',  RTX: 'Industrial',  LMT: 'Industrial',
+  UPS: 'Industrial',  FDX: 'Industrial',
+  // ── US Materials / Commodities ────────────────────────────────────────────
+  GLD: 'Materials',   SLV: 'Materials',   GOLD: 'Materials',
+  // ── ETFs ──────────────────────────────────────────────────────────────────
+  SPY: 'ETF',         QQQ: 'ETF',         VTI: 'ETF',
+  IWM: 'ETF',         VOO: 'ETF',         VEA: 'ETF',
+}
+
 const STOCK_BETAS: Record<string, number> = {
   NVDA: 1.72, AAPL: 1.24, MSFT: 0.90, TSLA: 2.01, AMZN: 1.15,
   GOOGL: 1.06, META: 1.31, AMD: 1.65, INTC: 0.85, AVGO: 1.15,
@@ -523,7 +587,9 @@ export default function PortfolioTab({
 
       let added = 0
       for (const h of parsed) {
-        await onAddHolding({ ...h, sector: sectorMap[h.ticker] || 'Other' })
+        const baseTicker = h.ticker.toUpperCase().split('.')[0]
+        const sector = TICKER_SECTORS[baseTicker] || sectorMap[h.ticker] || 'Other'
+        await onAddHolding({ ...h, sector })
         added++
       }
 
@@ -547,10 +613,18 @@ export default function PortfolioTab({
     weight: metrics.totalValue > 0 ? (h.current_price * h.shares) / metrics.totalValue * 100 : 0,
   }))
 
-  const effectiveSectors = holdings.map(h => ({
-    sector: yahooSectors[h.ticker] || h.sector || 'Other',
-    value: h.current_price * h.shares,
-  }))
+  const effectiveSectors = holdings.map(h => {
+    const baseTicker = h.ticker.toUpperCase().split('.')[0]
+    // Priority: 1) client-side hardcoded map (instant, reliable)
+    //           2) Yahoo API result fetched on mount
+    //           3) value stored in DB
+    const sector =
+      TICKER_SECTORS[baseTicker] ||
+      yahooSectors[h.ticker] ||
+      (h.sector && h.sector !== 'Other' ? h.sector : null) ||
+      'Other'
+    return { sector, value: h.current_price * h.shares }
+  })
 
   const sectorAllocation = effectiveSectors.reduce((acc, h) => {
     const ex = acc.find(s => s.sector === h.sector)
