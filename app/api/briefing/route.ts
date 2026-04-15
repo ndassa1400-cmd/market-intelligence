@@ -150,6 +150,9 @@ Be thorough and analytically rigorous. Generate at least 8 news cards, 5-6 mover
     return NextResponse.json(newBriefing)
   } catch (error) {
     console.error('Briefing generation error:', error)
-    return NextResponse.json({ error: 'Failed to generate briefing' }, { status: 500 })
+    return NextResponse.json({
+      error: 'Failed to generate briefing',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }
