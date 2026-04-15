@@ -1,6 +1,3 @@
--- Enable RLS
-ALTER DATABASE postgres SET app.settings.jwt_secret = '';
-
 -- profiles table
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
