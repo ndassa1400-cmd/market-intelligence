@@ -517,12 +517,12 @@ export default function PortfolioTab({
   const [csvMessage, setCsvMessage] = useState('')
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set())
   const [yahooSectors, setYahooSectors] = useState<Record<string, string>>({})
-  // Live prices from Yahoo Finance — overrides DB-stored current_price
   const [livePrices, setLivePrices] = useState<Record<string, number>>({})
   const [pricesLoading, setPricesLoading] = useState(true)
-  // FX rates → NZD (all portfolio values shown in NZD)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [fxRates, setFxRates] = useState<Record<string, number>>({ USD: 1.72, AUD: 1.07, NZD: 1 })
   const fileRef = useRef<HTMLInputElement>(null)
+  const snapshotSavedRef = useRef(false)
 
   // Fetch live FX rates once on mount
   useEffect(() => {
@@ -532,12 +532,13 @@ export default function PortfolioTab({
       .catch(() => {})
   }, [])
 
-  // On mount, fetch live prices + sectors for all holdings from Yahoo Finance.
-  // current_price in DB is set at import time (= buy price) — we need real market prices.
+  // Full load: sectors + prices. Then refresh prices every 60 seconds.
   const tickerKey = holdings.map(h => h.ticker).sort().join(',')
   useEffect(() => {
     if (!holdings.length) { setPricesLoading(false); return }
     setPricesLoading(true)
+
+    // Fetch sectors + prices together on initial load
     Promise.allSettled(
       holdings.map(h =>
         fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
@@ -560,9 +561,56 @@ export default function PortfolioTab({
       setYahooSectors(sectorMap)
       setLivePrices(priceMap)
       setPricesLoading(false)
+      setLastUpdated(new Date())
     })
+
+    // Price-only refresh every 60 seconds (sectors don't change minute-to-minute)
+    const refreshPrices = () => {
+      Promise.allSettled(
+        holdings.map(h =>
+          fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
+            .then(r => r.json())
+            .then((d: { currentPrice?: number }) => ({
+              ticker: h.ticker,
+              currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
+            }))
+            .catch(() => ({ ticker: h.ticker, currentPrice: null }))
+        )
+      ).then(results => {
+        const priceMap: Record<string, number> = {}
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value.currentPrice !== null) {
+            priceMap[r.value.ticker] = r.value.currentPrice
+          }
+        })
+        setLivePrices(prev => ({ ...prev, ...priceMap }))
+        setLastUpdated(new Date())
+      })
+    }
+
+    const interval = setInterval(refreshPrices, 60_000)
+    return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickerKey])
+
+  // Save a daily wealth snapshot once per session when prices first load.
+  // This builds a real database of portfolio value over time.
+  useEffect(() => {
+    if (pricesLoading || snapshotSavedRef.current || !holdings.length) return
+    snapshotSavedRef.current = true
+    const totalValue = holdings.reduce((sum, h) => {
+      const price = livePrices[h.ticker] ?? h.current_price
+      const rate = fxRates[h.currency] ?? 1
+      return sum + price * h.shares * rate
+    }, 0)
+    if (totalValue <= 0) return
+    fetch('/api/wealth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total_value: Math.round(totalValue) }),
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricesLoading])
 
   // Get the best available price for a holding: live Yahoo price > DB price
   const getPrice = (h: Holding): number => livePrices[h.ticker] ?? h.current_price
@@ -745,6 +793,21 @@ export default function PortfolioTab({
 
   return (
     <div className="space-y-10">
+
+      {/* Live indicator */}
+      <div className="flex items-center gap-2">
+        {pricesLoading ? (
+          <span className="flex items-center gap-1.5 text-[10px] text-muted font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-text animate-pulse" />
+            Fetching live prices…
+          </span>
+        ) : lastUpdated ? (
+          <span className="flex items-center gap-1.5 text-[10px] text-muted font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-text" />
+            Live · Updated {lastUpdated.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        ) : null}
+      </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
