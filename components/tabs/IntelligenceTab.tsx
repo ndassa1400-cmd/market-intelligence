@@ -10,6 +10,8 @@ interface IntelligenceTabProps {
   loading?: boolean
   userTickers?: string[]
   holdings?: Holding[]
+  onGenerateBriefing?: () => void
+  generating?: boolean
 }
 
 // ── Portfolio Intelligence Panel ─────────────────────────────────────────────
@@ -383,8 +385,8 @@ const IMPACT_BADGE: Record<string, string> = {
   low: 'bg-green-bg text-green-text border border-green-text/20',
 }
 
-export default function IntelligenceTab({ briefing, profile, loading, userTickers = [], holdings = [] }: IntelligenceTabProps) {
-  if (loading) {
+export default function IntelligenceTab({ briefing, profile, loading, userTickers = [], holdings = [], onGenerateBriefing, generating }: IntelligenceTabProps) {
+  if (loading || generating) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-6">
         <div className="relative">
@@ -403,11 +405,19 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
   if (!briefing) {
     return (
       <div className="text-center py-40">
-        <div className="w-14 h-14 rounded-full bg-surface2 flex items-center justify-center mx-auto mb-4">
+        <div className="w-14 h-14 rounded-full bg-accent-bg flex items-center justify-center mx-auto mb-6">
           <span className="text-2xl">📰</span>
         </div>
-        <p className="text-sm font-bold tracking-[0.15em] uppercase text-muted">No Briefing Available</p>
-        <p className="text-dim text-sm mt-2">Refresh the page to try again.</p>
+        <p className="text-sm font-bold tracking-[0.15em] uppercase text-muted mb-2">No Briefing For Today</p>
+        <p className="text-dim text-sm mb-8">Generate today's intelligence report — takes about 20 seconds.</p>
+        {onGenerateBriefing && (
+          <button
+            onClick={onGenerateBriefing}
+            className="px-8 py-3.5 bg-gradient-to-r from-caramel to-caramel-deep text-white font-bold text-sm rounded-full hover:opacity-90 transition-opacity shadow-soft"
+          >
+            Generate Today's Briefing
+          </button>
+        )}
       </div>
     )
   }

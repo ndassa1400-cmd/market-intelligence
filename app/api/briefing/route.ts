@@ -116,12 +116,12 @@ Return ONLY valid JSON (no markdown, no code fences):
   "macroSummary": "Tariff escalation dominates risk sentiment today. Tech resilient on AI demand. Energy bid as tanker rerouting tightens Red Sea supply."
 }
 
-Generate exactly 16 news cards (8 world/political, 8 financial), 5-6 movers, 5-6 theses. Every headline should be bold and specific — a reader should understand the story from the headline alone.`
+Generate exactly 10 news cards (5 world/political, 5 financial), 5 movers, 4 theses. Every headline should be bold and specific — a reader should understand the story from the headline alone.`
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 12000,
+      max_tokens: 6000,
       temperature: 0.7,
     })
 
@@ -173,5 +173,22 @@ Generate exactly 16 news cards (8 world/political, 8 financial), 5-6 movers, 5-6
       error: 'Failed to generate briefing',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
+  }
+}
+
+// POST — force regenerate today's briefing (deletes existing, generates fresh)
+export async function POST() {
+  try {
+    const supabase = createAdminClient()
+    const today = new Date().toISOString().split('T')[0]
+
+    // Delete any existing briefing for today so GET regenerates
+    await supabase.from('briefings').delete().eq('briefing_date', today)
+
+    // Delegate to GET logic by calling it internally
+    return GET(new NextRequest('http://localhost/api/briefing'))
+  } catch (error) {
+    console.error('Force regenerate error:', error)
+    return NextResponse.json({ error: 'Failed to regenerate' }, { status: 500 })
   }
 }

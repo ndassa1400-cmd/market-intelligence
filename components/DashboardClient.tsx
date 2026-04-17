@@ -29,11 +29,13 @@ export default function DashboardClient({
   const [loading, setLoading] = useState(false)
   const [currentBriefing, setCurrentBriefing] = useState<Briefing | null>(briefing)
   const [briefingLoading, setBriefingLoading] = useState(true)
+  const [briefingGenerating, setBriefingGenerating] = useState(false)
 
   useEffect(() => {
     const fetchBriefing = async () => {
       try {
         const res = await fetch('/api/briefing')
+        if (!res.ok) return
         const data = await res.json()
         if (data?.id) setCurrentBriefing(data)
       } catch (e) {
@@ -44,6 +46,20 @@ export default function DashboardClient({
     }
     fetchBriefing()
   }, [])
+
+  const handleGenerateBriefing = async () => {
+    setBriefingGenerating(true)
+    try {
+      const res = await fetch('/api/briefing', { method: 'POST' })
+      if (!res.ok) throw new Error('Generation failed')
+      const data = await res.json()
+      if (data?.id) setCurrentBriefing(data)
+    } catch (e) {
+      console.error('Briefing generation error:', e)
+    } finally {
+      setBriefingGenerating(false)
+    }
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -167,8 +183,10 @@ export default function DashboardClient({
             briefing={currentBriefing}
             profile={profile}
             loading={briefingLoading}
+            generating={briefingGenerating}
             userTickers={holdings.map(h => h.ticker)}
             holdings={holdings}
+            onGenerateBriefing={handleGenerateBriefing}
           />
         ) : (
           <PortfolioTab
