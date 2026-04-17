@@ -117,7 +117,7 @@ export default function DashboardClient({
 
           {/* Wordmark */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-accent to-[#a78bfa] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-caramel to-caramel-deep flex items-center justify-center">
               <span className="text-white text-[10px] font-black tracking-tight">MI</span>
             </div>
             <h1 className="text-xs font-bold tracking-[0.18em] uppercase text-muted hidden sm:block">

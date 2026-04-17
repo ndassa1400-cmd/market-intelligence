@@ -16,29 +16,29 @@ interface IntelligenceTabProps {
 
 const ACTION_STYLE: Record<string, { badge: string; dot: string }> = {
   BUY:    { badge: 'bg-[#dcfce7] text-[#15803d] border border-[#86efac]', dot: 'bg-[#15803d]' },
-  ADD:    { badge: 'bg-[#ccfbf1] text-[#0f766e] border border-[#5eead4]', dot: 'bg-[#0d9488]' },
-  HOLD:   { badge: 'bg-[#dbeafe] text-[#1d4ed8] border border-[#93c5fd]', dot: 'bg-[#2563eb]' },
-  WATCH:  { badge: 'bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe]', dot: 'bg-[#7c3aed]' },
-  REDUCE: { badge: 'bg-[#fef3c7] text-[#b45309] border border-[#fcd34d]', dot: 'bg-[#d97706]' },
+  ADD:    { badge: 'bg-[#dcfce7] text-[#166534] border border-[#86efac]', dot: 'bg-[#15803d]' },
+  HOLD:   { badge: 'bg-[#fdf6ee] text-[#6d3718] border border-[#f5d9b2]', dot: 'bg-[#c97c42]' },
+  WATCH:  { badge: 'bg-[#faecd8] text-[#4a2510] border border-[#ebb98a]', dot: 'bg-[#a85f2e]' },
+  REDUCE: { badge: 'bg-[#f5d9b2] text-[#4a2510] border border-[#dc9a62]', dot: 'bg-[#8a4a22]' },
   SELL:   { badge: 'bg-[#fee2e2] text-[#991b1b] border border-[#fca5a5]', dot: 'bg-[#dc2626]' },
 }
 
 const CONVICTION_STYLE: Record<string, string> = {
-  HIGH:   'text-[#dc2626] font-black',
-  MEDIUM: 'text-[#d97706] font-bold',
-  LOW:    'text-[#6b7280] font-medium',
+  HIGH:   'text-[#4a2510] font-black',
+  MEDIUM: 'text-[#8a4a22] font-bold',
+  LOW:    'text-[#a85f2e] font-medium',
 }
 
 const IMPACT_COLOR: Record<string, string> = {
   BULLISH: 'text-[#15803d]',
   BEARISH: 'text-[#dc2626]',
-  MIXED:   'text-[#d97706]',
+  MIXED:   'text-[#a85f2e]',
 }
 
 const URGENCY_STYLE: Record<string, string> = {
   HIGH:   'bg-[#fee2e2] text-[#991b1b] border border-[#fca5a5]',
-  MEDIUM: 'bg-[#fef3c7] text-[#b45309] border border-[#fcd34d]',
-  LOW:    'bg-[#f3f4f6] text-[#374151] border border-[#d1d5db]',
+  MEDIUM: 'bg-[#faecd8] text-[#6d3718] border border-[#ebb98a]',
+  LOW:    'bg-[#fdf6ee] text-[#8a4a22] border border-[#f5d9b2]',
 }
 
 function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]; profile: Profile }) {
@@ -75,7 +75,7 @@ function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]
             <p className="text-xs font-bold tracking-[0.18em] uppercase text-muted mb-1">Analyst Intelligence</p>
             <h3 className="text-xl font-black text-text">Your Portfolio Under The Macro Lens</h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-[#7c3aed] flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-caramel to-caramel-deep flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-black">AI</span>
           </div>
         </div>
@@ -84,7 +84,7 @@ function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]
         </p>
         <button
           onClick={run}
-          className="px-6 py-3 bg-gradient-to-r from-accent to-[#7c3aed] text-white font-bold text-sm rounded-full hover:opacity-90 transition-opacity shadow-soft"
+          className="px-6 py-3 bg-gradient-to-r from-caramel to-caramel-deep text-white font-bold text-sm rounded-full hover:opacity-90 transition-opacity shadow-soft"
         >
           Run Analyst Briefing
         </button>
@@ -214,7 +214,7 @@ function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]
                 </div>
                 {theme.newIdea && (
                   <div className="flex items-start gap-2">
-                    <span className="text-[9px] font-black text-[#0f766e] bg-[#ccfbf1] border border-[#5eead4] px-2 py-1 rounded-full flex-shrink-0">
+                    <span className="text-[9px] font-black text-[#4a2510] bg-[#faecd8] border border-[#ebb98a] px-2 py-1 rounded-full flex-shrink-0">
                       IDEA
                     </span>
                     <p className="text-xs text-dim">{theme.newIdea}</p>
@@ -274,7 +274,7 @@ function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]
                   <div className="flex gap-3 flex-wrap">
                     {idea.catalyst && (
                       <div className="flex items-start gap-1.5">
-                        <span className="text-[9px] font-black text-[#0f766e] flex-shrink-0 mt-0.5">▲</span>
+                        <span className="text-[9px] font-black text-[#15803d] flex-shrink-0 mt-0.5">▲</span>
                         <p className="text-[10px] text-dim">{idea.catalyst}</p>
                       </div>
                     )}
@@ -296,7 +296,7 @@ function PortfolioIntelligencePanel({ holdings, profile }: { holdings: Holding[]
   )
 }
 
-// --- Category-based card theming ---
+// --- Category-based card theming — monochromatic caramel family ---
 const TAG_THEMES: Array<{
   keywords: string[]
   card: string
@@ -306,67 +306,67 @@ const TAG_THEMES: Array<{
 }> = [
   {
     keywords: ['politics', 'trump', 'election', 'congress', 'white house', 'administration', 'executive', 'government'],
-    card: 'bg-gradient-to-br from-[#fff7ed] to-white',
-    tag: 'bg-[#fff7ed] text-[#c2410c] border border-[#fdba74]',
-    accent: '#c2410c',
-    dot: 'bg-[#ea580c]',
+    card: 'bg-gradient-to-br from-[#fdf6ee] to-white',
+    tag: 'bg-[#fdf6ee] text-[#6d3718] border border-[#f5d9b2]',
+    accent: '#6d3718',
+    dot: 'bg-[#8a4a22]',
   },
   {
     keywords: ['geopolitics', 'war', 'conflict', 'military', 'nato', 'peace', 'iran', 'russia', 'china', 'ukraine', 'taiwan', 'middle east', 'diplomacy'],
-    card: 'bg-gradient-to-br from-[#eff6ff] to-white',
-    tag: 'bg-[#eff6ff] text-[#1d4ed8] border border-[#93c5fd]',
-    accent: '#1d4ed8',
-    dot: 'bg-[#1d4ed8]',
+    card: 'bg-gradient-to-br from-[#faecd8] to-white',
+    tag: 'bg-[#faecd8] text-[#4a2510] border border-[#ebb98a]',
+    accent: '#4a2510',
+    dot: 'bg-[#6d3718]',
   },
   {
     keywords: ['energy', 'oil', 'gas', 'opec', 'tanker', 'crude', 'pipeline', 'lng', 'coal', 'petrol'],
-    card: 'bg-gradient-to-br from-[#fffbeb] to-white',
-    tag: 'bg-[#fffbeb] text-[#b45309] border border-[#fcd34d]',
-    accent: '#b45309',
-    dot: 'bg-[#d97706]',
+    card: 'bg-gradient-to-br from-[#f5d9b2] to-white',
+    tag: 'bg-[#f5d9b2] text-[#4a2510] border border-[#dc9a62]',
+    accent: '#8a4a22',
+    dot: 'bg-[#a85f2e]',
   },
   {
     keywords: ['tech', 'ai', 'technology', 'semiconductor', 'chip', 'software', 'cyber', 'data', 'cloud', 'quantum', 'nvidia', 'apple', 'microsoft', 'google', 'meta'],
-    card: 'bg-gradient-to-br from-[#f5f3ff] to-white',
-    tag: 'bg-[#f5f3ff] text-[#7c3aed] border border-[#c4b5fd]',
-    accent: '#7c3aed',
-    dot: 'bg-[#7c3aed]',
+    card: 'bg-gradient-to-br from-[#edd4a0] to-white',
+    tag: 'bg-[#edd4a0] text-[#6d3718] border border-[#d9a85c]',
+    accent: '#6d3718',
+    dot: 'bg-[#8a4a22]',
   },
   {
     keywords: ['climate', 'environment', 'carbon', 'green', 'renewable', 'solar', 'wind', 'emissions', 'esg', 'sustainability'],
-    card: 'bg-gradient-to-br from-[#f0fdf4] to-white',
-    tag: 'bg-[#f0fdf4] text-[#15803d] border border-[#86efac]',
-    accent: '#15803d',
-    dot: 'bg-[#15803d]',
+    card: 'bg-gradient-to-br from-[#fdf6ee] to-white',
+    tag: 'bg-[#fdf6ee] text-[#8a4a22] border border-[#f5d9b2]',
+    accent: '#8a4a22',
+    dot: 'bg-[#c97c42]',
   },
   {
     keywords: ['market', 'stocks', 'equities', 'fed', 'interest rate', 'inflation', 'cpi', 'earnings', 'ipo', 'bond', 'yield', 'rally', 'selloff', 'correction'],
-    card: 'bg-gradient-to-br from-[#ecfeff] to-white',
-    tag: 'bg-[#ecfeff] text-[#0e7490] border border-[#67e8f9]',
-    accent: '#0e7490',
-    dot: 'bg-[#0891b2]',
+    card: 'bg-gradient-to-br from-[#e4c07e]/30 to-white',
+    tag: 'bg-[#e4c07e]/60 text-[#4a2510] border border-[#c97c42]/50',
+    accent: '#a85f2e',
+    dot: 'bg-[#c97c42]',
   },
   {
     keywords: ['health', 'pharma', 'drug', 'fda', 'medical', 'pandemic', 'vaccine', 'biotech', 'healthcare'],
-    card: 'bg-gradient-to-br from-[#fdf2f8] to-white',
-    tag: 'bg-[#fdf2f8] text-[#9d174d] border border-[#f9a8d4]',
-    accent: '#9d174d',
-    dot: 'bg-[#db2777]',
+    card: 'bg-gradient-to-br from-[#faecd8] to-white',
+    tag: 'bg-[#faecd8] text-[#6d3718] border border-[#ebb98a]',
+    accent: '#6d3718',
+    dot: 'bg-[#a85f2e]',
   },
   {
     keywords: ['crypto', 'bitcoin', 'ethereum', 'blockchain', 'defi', 'token', 'nft', 'web3'],
-    card: 'bg-gradient-to-br from-[#fffbeb] to-white',
-    tag: 'bg-[#fffbeb] text-[#92400e] border border-[#fcd34d]',
-    accent: '#92400e',
-    dot: 'bg-[#f59e0b]',
+    card: 'bg-gradient-to-br from-[#f5d9b2] to-white',
+    tag: 'bg-[#f5d9b2] text-[#6d3718] border border-[#dc9a62]',
+    accent: '#6d3718',
+    dot: 'bg-[#c97c42]',
   },
 ]
 
 const DEFAULT_THEME = {
-  card: 'bg-gradient-to-br from-[#eef2ff] to-white',
-  tag: 'bg-[#eef2ff] text-[#4f46e5] border border-[#a5b4fc]',
-  accent: '#4f46e5',
-  dot: 'bg-[#6366f1]',
+  card: 'bg-gradient-to-br from-[#fdf6ee] to-white',
+  tag: 'bg-[#fdf6ee] text-[#8a4a22] border border-[#f5d9b2]',
+  accent: '#c97c42',
+  dot: 'bg-[#c97c42]',
 }
 
 function getTagTheme(tag: string, headline: string) {
@@ -379,7 +379,7 @@ function getTagTheme(tag: string, headline: string) {
 
 const IMPACT_BADGE: Record<string, string> = {
   high: 'bg-red-bg text-red-text border border-red-text/20',
-  medium: 'bg-amber-bg text-amber-text border border-amber-text/20',
+  medium: 'bg-sand text-caramel-deep border border-sand-border/30',
   low: 'bg-green-bg text-green-text border border-green-text/20',
 }
 
@@ -451,7 +451,7 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
       )}
 
       {/* Macro Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] rounded-2xl px-8 py-7 text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#8a4a22] to-[#4a2510] rounded-2xl px-8 py-7 text-white">
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10" />
         <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10" />
         <p className="text-xs font-bold tracking-[0.25em] uppercase text-white/60 mb-3">Macro Summary</p>
@@ -672,7 +672,7 @@ function SectionHeader({ num, title, badge, badgeColor }: { num: string; title: 
 }
 
 function ConvictionBar({ conviction }: { conviction: number }) {
-  const colors = ['bg-red-text', 'bg-amber-text', 'bg-amber-text', 'bg-green-text', 'bg-green-text',
+  const colors = ['bg-red-text', 'bg-caramel-deep', 'bg-caramel', 'bg-green-text', 'bg-green-text',
     'bg-green-text', 'bg-accent', 'bg-accent', 'bg-accent', 'bg-accent']
   const color = colors[Math.min(conviction - 1, 9)] || 'bg-accent'
   return (
@@ -727,9 +727,9 @@ function NewsCardComponent({ card, userTickers, featured }: { card: NewsCard; us
 
         {/* Time layers */}
         <div className="space-y-2 pt-1 border-t border-black/5">
-          <LayerRow label="0–4 wks" text={card.layer1} color="text-amber-text" />
-          <LayerRow label="1–6 mths" text={card.layer2} color="text-blue-text" />
-          <LayerRow label="6–24 mths" text={card.layer3} color="text-accent-text" />
+          <LayerRow label="0–4 wks" text={card.layer1} color="text-caramel" />
+          <LayerRow label="1–6 mths" text={card.layer2} color="text-caramel-dark" />
+          <LayerRow label="6–24 mths" text={card.layer3} color="text-caramel-deep" />
         </div>
 
         {/* Footer */}
@@ -768,9 +768,9 @@ const THESIS_PASTELS = [
 
 const STRENGTH_STYLES: Record<string, string> = {
   'Strengthening': 'bg-green-bg text-green-text border border-green-text/20',
-  'Holding': 'bg-blue-bg text-blue-text border border-blue-text/20',
+  'Holding': 'bg-sand text-caramel-deep border border-sand-border/30',
   'Weakening': 'bg-red-bg text-red-text border border-red-text/20',
-  'New': 'bg-pastel-5 text-pastel-5t border border-pastel-5t/20',
+  'New': 'bg-pastel-2 text-pastel-2t border border-pastel-2t/20',
 }
 
 function ThesisCard({ thesis, idx }: { thesis: Thesis; idx: number }) {

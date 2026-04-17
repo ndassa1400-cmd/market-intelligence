@@ -149,7 +149,7 @@ function calcDiversification(holdings: Holding[], totalValue: number) {
   let label: string, color: string, pct: number
   if (hhi < 1000) { label = 'Excellent'; color = 'text-green-text'; pct = 95 }
   else if (hhi < 1800) { label = 'Good'; color = 'text-green-text'; pct = 75 }
-  else if (hhi < 2500) { label = 'Moderate'; color = 'text-amber-text'; pct = 50 }
+  else if (hhi < 2500) { label = 'Moderate'; color = 'text-caramel-deep'; pct = 50 }
   else if (hhi < 4000) { label = 'Concentrated'; color = 'text-red-text'; pct = 30 }
   else { label = 'High Risk'; color = 'text-red-text'; pct = 15 }
   return { hhi: Math.round(hhi), label, color, pct }
@@ -196,17 +196,18 @@ function parseSharesiesCSV(text: string): Array<Omit<Holding, 'id' | 'user_id' |
     }))
 }
 
+// Monochromatic caramel/sand palette — 10 shades, cream → deep
 const PASTEL_PALETTE = [
-  { bg: '#fce7f3', text: '#be185d', border: '#f9a8d4', line: '#be185d' },
-  { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd', line: '#1d4ed8' },
-  { bg: '#dcfce7', text: '#15803d', border: '#86efac', line: '#15803d' },
-  { bg: '#fef3c7', text: '#b45309', border: '#fcd34d', line: '#b45309' },
-  { bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe', line: '#7e22ce' },
-  { bg: '#ccfbf1', text: '#0f766e', border: '#5eead4', line: '#0f766e' },
-  { bg: '#ffedd5', text: '#c2410c', border: '#fdba74', line: '#c2410c' },
-  { bg: '#e0e7ff', text: '#3730a3', border: '#a5b4fc', line: '#3730a3' },
-  { bg: '#fdf2f8', text: '#9d174d', border: '#f0abfc', line: '#9d174d' },
-  { bg: '#ecfccb', text: '#3f6212', border: '#bef264', line: '#3f6212' },
+  { bg: '#fdf6ee', text: '#6d3718', border: '#f5d9b2', line: '#c97c42' },
+  { bg: '#faecd8', text: '#4a2510', border: '#ebb98a', line: '#a85f2e' },
+  { bg: '#f5d9b2', text: '#4a2510', border: '#dc9a62', line: '#8a4a22' },
+  { bg: '#edd4a0', text: '#6d3718', border: '#d9a85c', line: '#6d3718' },
+  { bg: '#e4c07e', text: '#4a2510', border: '#c97c42', line: '#4a2510' },
+  { bg: '#d9a85c', text: '#fdf6ee', border: '#a85f2e', line: '#fdf6ee' },
+  { bg: '#c97c42', text: '#fdf6ee', border: '#8a4a22', line: '#faecd8' },
+  { bg: '#a85f2e', text: '#faecd8', border: '#6d3718', line: '#faecd8' },
+  { bg: '#8a4a22', text: '#faecd8', border: '#4a2510', line: '#faecd8' },
+  { bg: '#6d3718', text: '#fdf6ee', border: '#4a2510', line: '#fdf6ee' },
 ]
 
 function getStockColor(ticker: string, allTickers: string[]) {
@@ -782,12 +783,12 @@ export default function PortfolioTab({
     const { plPercent, beta } = h
     const cons = profile.risk_tolerance === 'conservative' || profile.risk_tolerance === 'low'
     const agg = profile.risk_tolerance === 'aggressive' || profile.risk_tolerance === 'growth'
-    if (plPercent > 60 && cons) return { action: 'REDUCE', style: 'bg-amber-bg text-amber-text border-amber-text/30' }
+    if (plPercent > 60 && cons) return { action: 'REDUCE', style: 'bg-sand text-caramel-deep border-sand-border/30' }
     if (plPercent < -25 && cons) return { action: 'SELL', style: 'bg-red-bg text-red-text border-red-text/30' }
     if (plPercent < -15 && agg && profile.horizon === 'long') return { action: 'ADD', style: 'bg-green-bg text-green-text border-green-text/30' }
-    if (plPercent > 40 && profile.horizon === 'short') return { action: 'TAKE PROFIT', style: 'bg-amber-bg text-amber-text border-amber-text/30' }
-    if (beta > 1.8 && cons) return { action: 'REDUCE', style: 'bg-amber-bg text-amber-text border-amber-text/30' }
-    if (plPercent > 0) return { action: 'HOLD', style: 'bg-blue-bg text-blue-text border-blue-text/30' }
+    if (plPercent > 40 && profile.horizon === 'short') return { action: 'TAKE PROFIT', style: 'bg-sand text-caramel-deep border-sand-border/30' }
+    if (beta > 1.8 && cons) return { action: 'REDUCE', style: 'bg-sand text-caramel-deep border-sand-border/30' }
+    if (plPercent > 0) return { action: 'HOLD', style: 'bg-cream text-caramel-dark border-sand-border/30' }
     return { action: 'HOLD', style: 'bg-surface2 text-text2 border-border' }
   }
 
@@ -798,7 +799,7 @@ export default function PortfolioTab({
       <div className="flex items-center gap-2">
         {pricesLoading ? (
           <span className="flex items-center gap-1.5 text-[10px] text-muted font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-text animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-caramel animate-pulse" />
             Fetching live prices…
           </span>
         ) : lastUpdated ? (
@@ -830,7 +831,7 @@ export default function PortfolioTab({
         <MetricCard
           label="Portfolio Beta"
           value={portfolioBeta.toFixed(2)}
-          accent={portfolioBeta > 1.5 ? 'text-red-text' : portfolioBeta > 1.1 ? 'text-amber-text' : 'text-green-text'}
+          accent={portfolioBeta > 1.5 ? 'text-red-text' : portfolioBeta > 1.1 ? 'text-caramel-deep' : 'text-green-text'}
           sub={portfolioBeta > 1.2 ? 'Higher market risk' : portfolioBeta < 0.8 ? 'Defensive' : 'Market-like'}
         />
         <MetricCard
@@ -944,7 +945,7 @@ export default function PortfolioTab({
             {newsSignals.map((signal, idx) => {
               const impactColors: Record<string, string> = {
                 high: 'border-l-red-text bg-red-bg/40',
-                medium: 'border-l-amber-text bg-amber-bg/40',
+                medium: 'border-l-caramel bg-sand/40',
                 low: 'border-l-green-text bg-green-bg/40',
               }
               return (
@@ -1052,7 +1053,7 @@ export default function PortfolioTab({
                       </div>
                       <div className="hidden sm:block">
                         <p className="text-[10px] text-muted uppercase tracking-wide font-bold">Beta</p>
-                        <p className={`text-sm font-semibold ${holding.beta > 1.5 ? 'text-red-text' : holding.beta > 1.1 ? 'text-amber-text' : 'text-green-text'}`}>
+                        <p className={`text-sm font-semibold ${holding.beta > 1.5 ? 'text-red-text' : holding.beta > 1.1 ? 'text-caramel-deep' : 'text-green-text'}`}>
                           {holding.beta.toFixed(2)}
                         </p>
                       </div>
