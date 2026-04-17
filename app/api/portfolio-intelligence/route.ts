@@ -3,6 +3,9 @@ import Groq from 'groq-sdk'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Holding, Profile } from '@/lib/types'
 
+// Allow up to 60s for Groq to generate portfolio intelligence
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   try {
     const { holdings, profile } = await req.json() as { holdings: Holding[]; profile: Profile }

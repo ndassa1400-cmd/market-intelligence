@@ -2,6 +2,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Groq from 'groq-sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Allow up to 60s for Groq to generate the full briefing
+export const maxDuration = 60
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
