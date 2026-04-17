@@ -425,7 +425,6 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
   const { content } = briefing
   const highImpact = content.newsCards.filter(c => c.impact === 'high')
   const otherCards = content.newsCards.filter(c => c.impact !== 'high')
-  const categories = groupByCategory(content.newsCards)
 
   return (
     <div className="space-y-14">
@@ -504,22 +503,9 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
         </div>
       )}
 
-      {/* The Bigger Picture — narrative groupings */}
-      {categories.length > 0 && (
-        <div>
-          <SectionHeader num="02" title="The Bigger Picture" />
-          <p className="text-sm text-dim mt-2 mb-6">How today's stories connect — the threads that matter</p>
-          <div className="space-y-4">
-            {categories.map((cat, idx) => (
-              <CategoryNarrative key={idx} category={cat} userTickers={userTickers} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* All Other News */}
       <div>
-        <SectionHeader num="03" title="Global News Scan" badge={`${otherCards.length} stories`} badgeColor="bg-surface2 text-text2" />
+        <SectionHeader num="02" title="Global News Scan" badge={`${otherCards.length} stories`} badgeColor="bg-surface2 text-text2" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
           {otherCards.map((card, idx) => (
             <NewsCardComponent key={idx} card={card} userTickers={userTickers} />
@@ -529,7 +515,7 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
 
       {/* Movers */}
       <div>
-        <SectionHeader num="04" title="Short-Term Movers" />
+        <SectionHeader num="03" title="Short-Term Movers" />
         <div className="bg-surface border border-border rounded-2xl overflow-hidden mt-6 shadow-card">
           <table className="w-full text-sm">
             <thead>
@@ -572,7 +558,7 @@ export default function IntelligenceTab({ briefing, profile, loading, userTicker
 
       {/* Theses */}
       <div>
-        <SectionHeader num="05" title="Long-Term Themes" />
+        <SectionHeader num="04" title="Long-Term Themes" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
           {content.theses.map((thesis, idx) => (
             <ThesisCard key={idx} thesis={thesis} idx={idx} />
