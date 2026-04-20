@@ -400,28 +400,27 @@ function ThesisCard({ thesis, idx }: { thesis: Thesis; idx: number }) {
 // ── Analyst Verdict ───────────────────────────────────────────────────────────
 function AnalystVerdictBlock({ verdict }: { verdict: AnalystVerdict }) {
   return (
-    <div className="bg-gradient-to-br from-[#4a2510] to-[#6d3718] rounded-2xl p-8 text-white">
-      <div className="absolute inset-0 pointer-events-none" />
-      <p className="text-xs font-bold tracking-[0.25em] uppercase text-[#f5d9b2] mb-4">Analyst Verdict</p>
+    <div className="bg-[#fdf6ee] border border-[#ebb98a] border-l-4 border-l-caramel-deep rounded-2xl p-8">
+      <p className="text-xs font-bold tracking-[0.25em] uppercase text-caramel mb-6">Analyst Verdict</p>
       <div className="space-y-5">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#edd4a0] mb-1">Macro Cycle</p>
-          <p className="text-sm text-white leading-relaxed font-medium">{verdict.macroCycle}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-caramel mb-1">Macro Cycle</p>
+          <p className="text-sm text-text leading-relaxed font-medium">{verdict.macroCycle}</p>
         </div>
-        <div className="w-full h-px bg-white/20" />
+        <div className="w-full h-px bg-[#ebb98a]/40" />
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#edd4a0] mb-1">Dominant Theme</p>
-          <p className="text-sm text-white leading-relaxed font-medium">{verdict.dominantTheme}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-caramel mb-1">Dominant Theme</p>
+          <p className="text-sm text-text leading-relaxed font-medium">{verdict.dominantTheme}</p>
         </div>
-        <div className="w-full h-px bg-white/20" />
+        <div className="w-full h-px bg-[#ebb98a]/40" />
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#edd4a0] mb-1">Watch This Week</p>
-          <p className="text-sm text-white leading-relaxed font-medium">{verdict.watchFor}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-caramel mb-1">Watch This Week</p>
+          <p className="text-sm text-text leading-relaxed font-medium">{verdict.watchFor}</p>
         </div>
       </div>
       {verdict.marketMood && (
-        <div className="mt-6 inline-block bg-white/15 border border-[#f5d9b2]/40 rounded-full px-4 py-1.5">
-          <span className="text-xs font-black text-[#f5d9b2] tracking-wide">{verdict.marketMood}</span>
+        <div className="mt-6 inline-block bg-caramel border border-[#8a4a22] rounded-full px-4 py-1.5">
+          <span className="text-xs font-black text-white tracking-wide">{verdict.marketMood}</span>
         </div>
       )}
     </div>
@@ -520,11 +519,9 @@ export default function IntelligenceTab({
       )}
 
       {/* Macro Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#8a4a22] to-[#4a2510] rounded-2xl px-8 py-7 text-white">
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10" />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10" />
-        <p className="text-xs font-bold tracking-[0.25em] uppercase text-[#f5d9b2] mb-3">Macro Summary</p>
-        <p className="text-base leading-relaxed text-white max-w-3xl font-medium">{content.macroSummary}</p>
+      <div className="bg-[#fdf6ee] border border-[#ebb98a] border-l-4 border-l-caramel rounded-2xl px-8 py-7">
+        <p className="text-xs font-bold tracking-[0.25em] uppercase text-caramel mb-3">Macro Summary</p>
+        <p className="text-base leading-relaxed text-text max-w-3xl font-medium">{content.macroSummary}</p>
       </div>
 
       {/* Market Levels */}
