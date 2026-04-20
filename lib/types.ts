@@ -30,6 +30,37 @@ export interface WealthSnapshot {
   snapshot_date: string
 }
 
+// ── New briefing format ──────────────────────────────────────────────────────
+
+export interface NewsItem {
+  category: string          // 'Geopolitics' | 'Energy' | 'Technology' | 'Markets' | etc.
+  impact: 'high' | 'medium' | 'low'
+  headline: string
+  summary: string           // what happened + why it matters + so what
+  assets: string            // e.g. "Gold Up, Oil Up, USD Weakens"
+  tickers?: string[]
+}
+
+export interface ShortTermMover {
+  ticker: string
+  name?: string
+  exchange: string
+  inPortfolio: boolean
+  thesis: string
+  catalyst: string
+  risk: string
+  conviction: number        // 1–10
+}
+
+export interface AnalystVerdict {
+  macroCycle: string        // where we are in the cycle
+  dominantTheme: string     // single dominant market theme this week
+  watchFor: string          // one specific thing to watch 5–7 days out
+  marketMood: string        // e.g. "Risk-off. Defensives in favour."
+}
+
+// ── Legacy format (kept for backward compat) ────────────────────────────────
+
 export interface NewsCard {
   tag: string
   impact: 'high' | 'medium' | 'low'
@@ -61,6 +92,30 @@ export interface Thesis {
   todayUpdate: string
 }
 
+// ── Briefing ─────────────────────────────────────────────────────────────────
+
+export interface Briefing {
+  id: string
+  briefing_date: string
+  content: {
+    displayDate: string
+    macroSummary: string
+    marketLevels: Record<string, string>
+    // New format
+    newsItems?: NewsItem[]
+    shortTermMovers?: ShortTermMover[]
+    analystVerdict?: AnalystVerdict
+    // Shared
+    theses?: Thesis[]
+    // Legacy
+    newsCards?: NewsCard[]
+    movers?: Mover[]
+  }
+  created_at: string
+}
+
+// ── Portfolio Intelligence ───────────────────────────────────────────────────
+
 export interface PortfolioSignal {
   ticker: string
   action: 'BUY' | 'ADD' | 'HOLD' | 'REDUCE' | 'SELL' | 'WATCH'
@@ -73,7 +128,7 @@ export interface PortfolioSignal {
 
 export interface MacroTheme {
   title: string
-  chain: string          // Causal chain with → arrows
+  chain: string
   impact: 'BULLISH' | 'BEARISH' | 'MIXED'
   affectedTickers: string[]
   newIdea?: string
@@ -99,19 +154,4 @@ export interface PortfolioIntelligence {
   watchItems: WatchItem[]
   newIdeas: NewIdea[]
   analystNote: string
-}
-
-export interface Briefing {
-  id: string
-  briefing_date: string
-  content: {
-    date: string
-    displayDate: string
-    marketLevels: Record<string, string>
-    newsCards: NewsCard[]
-    movers: Mover[]
-    theses: Thesis[]
-    macroSummary: string
-  }
-  created_at: string
 }

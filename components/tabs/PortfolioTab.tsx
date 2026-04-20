@@ -645,10 +645,19 @@ export default function PortfolioTab({
   const diversification = calcDiversification(holdings, liveMetrics.totalValue)
   const allTickers = holdings.map(h => h.ticker)
 
-  const newsSignals = briefing?.content.newsCards
-    .filter(c => c.tickers && c.tickers.some(t => allTickers.includes(t)))
-    .map(c => ({ ...c, affected: c.tickers!.filter(t => allTickers.includes(t)) }))
-    .slice(0, 6) || []
+  // Support both new newsItems and legacy newsCards formats
+  const allNewsItems = [
+    ...(briefing?.content.newsItems || []).map(n => ({
+      headline: n.headline, what: n.summary, impact: n.impact, tickers: n.tickers || [],
+    })),
+    ...(briefing?.content.newsCards || []).map(c => ({
+      headline: c.headline, what: c.what, impact: c.impact, tickers: c.tickers || [],
+    })),
+  ]
+  const newsSignals = allNewsItems
+    .filter(c => c.tickers.some(t => allTickers.includes(t)))
+    .map(c => ({ ...c, affected: c.tickers.filter(t => allTickers.includes(t)) }))
+    .slice(0, 6)
 
   const toggleTicker = (ticker: string) => {
     setExpandedTickers(prev => {
@@ -951,7 +960,7 @@ export default function PortfolioTab({
               return (
                 <div key={idx} className={`rounded-2xl border border-border border-l-4 p-5 shadow-card ${impactColors[signal.impact] || ''}`}>
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <span className="text-xs font-bold text-text2 uppercase tracking-wide">{signal.tag}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${signal.impact === 'high' ? 'bg-red-bg text-red-text' : signal.impact === 'medium' ? 'bg-sand text-caramel-deep' : 'bg-green-bg text-green-text'}`}>{signal.impact?.toUpperCase()}</span>
                     <div className="flex gap-1.5 flex-wrap justify-end">
                       {signal.affected.map(t => {
                         const color = getStockColor(t, allTickers)
@@ -963,7 +972,7 @@ export default function PortfolioTab({
                     </div>
                   </div>
                   <p className="text-sm font-bold text-text leading-snug mb-1.5">{signal.headline}</p>
-                  <p className="text-xs text-dim leading-relaxed">{signal.layer1}</p>
+                  <p className="text-xs text-dim leading-relaxed">{signal.what}</p>
                 </div>
               )
             })}
