@@ -519,11 +519,14 @@ export default function PortfolioTab({
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set())
   const [yahooSectors, setYahooSectors] = useState<Record<string, string>>({})
   const [livePrices, setLivePrices] = useState<Record<string, number>>({})
+  const [sixMonthPrices, setSixMonthPrices] = useState<Record<string, number>>({})
   const [pricesLoading, setPricesLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [fxRates, setFxRates] = useState<Record<string, number>>({ USD: 1.72, AUD: 1.07, NZD: 1 })
   const fileRef = useRef<HTMLInputElement>(null)
   const snapshotSavedRef = useRef(false)
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Fetch live FX rates once on mount
   useEffect(() => {
@@ -533,64 +536,89 @@ export default function PortfolioTab({
       .catch(() => {})
   }, [])
 
-  // Full load: sectors + prices. Then refresh prices every 60 seconds.
+  // Helper: find the price closest to N days ago from a sorted prices array
+  const getPriceNDaysAgo = (prices: { date: string; close: number }[], days: number): number | null => {
+    if (!prices.length) return null
+    const target = new Date()
+    target.setDate(target.getDate() - days)
+    // Find the closest date (prefer the one just before target, then just after)
+    let best = prices[0]
+    let bestDiff = Math.abs(new Date(best.date).getTime() - target.getTime())
+    for (const p of prices) {
+      const diff = Math.abs(new Date(p.date).getTime() - target.getTime())
+      if (diff < bestDiff) { best = p; bestDiff = diff }
+    }
+    return best.close
+  }
+
+  // Full load: sectors + prices + 6M history. Then refresh prices every 60 seconds.
   const tickerKey = holdings.map(h => h.ticker).sort().join(',')
+
+  const refreshPrices = async (silent = false) => {
+    if (!silent) setRefreshing(true)
+    await Promise.allSettled(
+      holdings.map(h =>
+        fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
+          .then(r => r.json())
+          .then((d: { currentPrice?: number }) => ({
+            ticker: h.ticker,
+            currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
+          }))
+          .catch(() => ({ ticker: h.ticker, currentPrice: null }))
+      )
+    ).then(results => {
+      const priceMap: Record<string, number> = {}
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value.currentPrice !== null) {
+          priceMap[r.value.ticker] = r.value.currentPrice
+        }
+      })
+      setLivePrices(prev => ({ ...prev, ...priceMap }))
+      setLastUpdated(new Date())
+    })
+    if (!silent) setRefreshing(false)
+  }
+
   useEffect(() => {
     if (!holdings.length) { setPricesLoading(false); return }
     setPricesLoading(true)
 
-    // Fetch sectors + prices together on initial load
+    // Full load: fetch sectors + current price + 6M history
     Promise.allSettled(
       holdings.map(h =>
         fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
           .then(r => r.json())
-          .then((d: { sector?: string; currentPrice?: number }) => ({
+          .then((d: { sector?: string; currentPrice?: number; prices?: { date: string; close: number }[] }) => ({
             ticker: h.ticker,
             sector: d.sector || 'Other',
             currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
+            price6M: getPriceNDaysAgo(d.prices || [], 182),
           }))
-          .catch(() => ({ ticker: h.ticker, sector: 'Other', currentPrice: null }))
+          .catch(() => ({ ticker: h.ticker, sector: 'Other', currentPrice: null, price6M: null }))
       )
     ).then(results => {
       const sectorMap: Record<string, string> = {}
       const priceMap: Record<string, number> = {}
+      const sixMMap: Record<string, number> = {}
       results.forEach(r => {
         if (r.status !== 'fulfilled') return
         sectorMap[r.value.ticker] = r.value.sector
         if (r.value.currentPrice !== null) priceMap[r.value.ticker] = r.value.currentPrice
+        if (r.value.price6M !== null) sixMMap[r.value.ticker] = r.value.price6M
       })
       setYahooSectors(sectorMap)
       setLivePrices(priceMap)
+      setSixMonthPrices(sixMMap)
       setPricesLoading(false)
       setLastUpdated(new Date())
     })
 
-    // Price-only refresh every 60 seconds (sectors don't change minute-to-minute)
-    const refreshPrices = () => {
-      Promise.allSettled(
-        holdings.map(h =>
-          fetch(`/api/stock?ticker=${h.ticker}&currency=${h.currency}`)
-            .then(r => r.json())
-            .then((d: { currentPrice?: number }) => ({
-              ticker: h.ticker,
-              currentPrice: typeof d.currentPrice === 'number' ? d.currentPrice : null,
-            }))
-            .catch(() => ({ ticker: h.ticker, currentPrice: null }))
-        )
-      ).then(results => {
-        const priceMap: Record<string, number> = {}
-        results.forEach(r => {
-          if (r.status === 'fulfilled' && r.value.currentPrice !== null) {
-            priceMap[r.value.ticker] = r.value.currentPrice
-          }
-        })
-        setLivePrices(prev => ({ ...prev, ...priceMap }))
-        setLastUpdated(new Date())
-      })
+    // Price-only refresh every 60 seconds (silent background refresh)
+    if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
+    refreshIntervalRef.current = setInterval(() => refreshPrices(true), 60_000)
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
     }
-
-    const interval = setInterval(refreshPrices, 60_000)
-    return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickerKey])
 
@@ -632,13 +660,18 @@ export default function PortfolioTab({
     const totalPLPercent = costBasis > 0 ? (totalPL / costBasis) * 100 : 0
     const holdingsPL = holdings.map(h => ({
       ticker: h.ticker,
-      // % gain is currency-neutral (same currency top and bottom)
       plPercent: h.buy_price > 0 ? ((getPrice(h) - h.buy_price) / h.buy_price) * 100 : 0,
       value: toNZD(getPrice(h), h.currency) * h.shares,
     }))
     const best  = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent > b.plPercent ? a : b) : null
     const worst = holdingsPL.length ? holdingsPL.reduce((a, b) => a.plPercent < b.plPercent ? a : b) : null
-    return { totalValue, costBasis, totalPL, totalPLPercent, bestPerformer: best, worstPerformer: worst }
+    // 6-month P&L: current value vs value 6 months ago (where price history available)
+    const holdingsWith6M = holdings.filter(h => sixMonthPrices[h.ticker] !== undefined)
+    const value6MAgo = holdingsWith6M.reduce((sum, h) => sum + toNZD(sixMonthPrices[h.ticker], h.currency) * h.shares, 0)
+    const valueNow6M  = holdingsWith6M.reduce((sum, h) => sum + toNZD(getPrice(h), h.currency) * h.shares, 0)
+    const sixMonthPL = value6MAgo > 0 ? valueNow6M - value6MAgo : null
+    const sixMonthPLPercent = value6MAgo > 0 ? ((valueNow6M - value6MAgo) / value6MAgo) * 100 : null
+    return { totalValue, costBasis, totalPL, totalPLPercent, bestPerformer: best, worstPerformer: worst, sixMonthPL, sixMonthPLPercent }
   })()
 
   const portfolioBeta = calcPortfolioBeta(holdings, liveMetrics.totalValue)
@@ -740,11 +773,14 @@ export default function PortfolioTab({
   const holdingsWithPL = holdings.map(h => {
     const livePrice = getPrice(h)
     const valueNZD = toNZD(livePrice, h.currency) * h.shares
+    const price6M = sixMonthPrices[h.ticker]
+    const pct6M = (price6M && price6M > 0) ? ((livePrice - price6M) / price6M) * 100 : null
     return {
       ...h,
       current_price: livePrice,
       pl: (toNZD(livePrice, h.currency) - toNZD(h.buy_price, h.currency)) * h.shares,
       plPercent: h.buy_price > 0 ? ((livePrice - h.buy_price) / h.buy_price) * 100 : 0,
+      pct6M,
       beta: STOCK_BETAS[h.ticker.toUpperCase()] ?? 1.0,
       weight: liveMetrics.totalValue > 0 ? valueNZD / liveMetrics.totalValue * 100 : 0,
     }
@@ -804,8 +840,8 @@ export default function PortfolioTab({
   return (
     <div className="space-y-10">
 
-      {/* Live indicator */}
-      <div className="flex items-center gap-2">
+      {/* Live indicator + manual refresh */}
+      <div className="flex items-center gap-3">
         {pricesLoading ? (
           <span className="flex items-center gap-1.5 text-[10px] text-muted font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-caramel animate-pulse" />
@@ -813,28 +849,57 @@ export default function PortfolioTab({
           </span>
         ) : lastUpdated ? (
           <span className="flex items-center gap-1.5 text-[10px] text-muted font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-text" />
-            Live · Updated {lastUpdated.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' })}
+            <span className={`w-1.5 h-1.5 rounded-full ${refreshing ? 'bg-caramel animate-pulse' : 'bg-green-text'}`} />
+            {refreshing ? 'Refreshing…' : `Live · ${lastUpdated.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' })}`}
           </span>
         ) : null}
+        {!pricesLoading && (
+          <button
+            onClick={() => refreshPrices(false)}
+            disabled={refreshing}
+            className="text-[10px] font-bold text-caramel hover:text-caramel-deep disabled:opacity-40 transition-colors flex items-center gap-1"
+            title="Refresh prices now"
+          >
+            <svg className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0115.46-3.46M20 15a9 9 0 01-15.46 3.46" />
+            </svg>
+            Refresh
+          </button>
+        )}
+        <span className="text-[10px] text-dim">· Auto-refreshes every 60s</span>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <MetricCard
           label="Total Value (NZD)"
           value={pricesLoading ? '...' : `$${liveMetrics.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
         />
         <MetricCard label="Cost Basis (NZD)" value={`$${liveMetrics.costBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
         <MetricCard
-          label="Unrealised P&L"
+          label="Total P&L"
           value={pricesLoading ? '...' : `${liveMetrics.totalPL >= 0 ? '+' : ''}$${Math.abs(liveMetrics.totalPL).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
           accent={liveMetrics.totalPL >= 0 ? 'text-green-text' : 'text-red-text'}
+          sub={pricesLoading ? '' : `${liveMetrics.totalPLPercent >= 0 ? '+' : ''}${liveMetrics.totalPLPercent.toFixed(1)}% vs entry`}
         />
         <MetricCard
-          label="Return"
-          value={pricesLoading ? '...' : `${liveMetrics.totalPLPercent >= 0 ? '+' : ''}${liveMetrics.totalPLPercent.toFixed(1)}%`}
-          accent={liveMetrics.totalPLPercent >= 0 ? 'text-green-text' : 'text-red-text'}
+          label="6-Month Return"
+          value={
+            pricesLoading ? '...' :
+            liveMetrics.sixMonthPLPercent !== null
+              ? `${liveMetrics.sixMonthPLPercent >= 0 ? '+' : ''}${liveMetrics.sixMonthPLPercent.toFixed(1)}%`
+              : '—'
+          }
+          accent={
+            liveMetrics.sixMonthPLPercent !== null
+              ? liveMetrics.sixMonthPLPercent >= 0 ? 'text-green-text' : 'text-red-text'
+              : 'text-muted'
+          }
+          sub={
+            liveMetrics.sixMonthPL !== null && !pricesLoading
+              ? `${liveMetrics.sixMonthPL >= 0 ? '+' : ''}$${Math.abs(liveMetrics.sixMonthPL).toLocaleString('en-US', { maximumFractionDigits: 0 })} NZD`
+              : 'Loading history…'
+          }
         />
         <MetricCard label="Holdings" value={`${holdings.length}`} />
         <MetricCard
@@ -1051,10 +1116,21 @@ export default function PortfolioTab({
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-muted uppercase tracking-wide font-bold">P&L</p>
-                        <p className={`text-sm font-bold ${holding.plPercent >= 0 ? 'text-green-text' : 'text-red-text'}`}>
-                          {holding.plPercent >= 0 ? '+' : ''}{holding.plPercent.toFixed(1)}%
-                        </p>
+                        <p className="text-[10px] text-muted uppercase tracking-wide font-bold">6M</p>
+                        {holding.pct6M !== null ? (
+                          <p className={`text-sm font-bold ${holding.pct6M >= 0 ? 'text-green-text' : 'text-red-text'}`}>
+                            {holding.pct6M >= 0 ? '+' : ''}{holding.pct6M.toFixed(1)}%
+                          </p>
+                        ) : (
+                          <p className={`text-sm font-bold ${holding.plPercent >= 0 ? 'text-green-text' : 'text-red-text'}`}>
+                            {holding.plPercent >= 0 ? '+' : ''}{holding.plPercent.toFixed(1)}%
+                          </p>
+                        )}
+                        {holding.pct6M !== null && (
+                          <p className="text-[9px] text-dim leading-none mt-0.5">
+                            entry: {holding.plPercent >= 0 ? '+' : ''}{holding.plPercent.toFixed(1)}%
+                          </p>
+                        )}
                       </div>
                       <div className="hidden sm:block">
                         <p className="text-[10px] text-muted uppercase tracking-wide font-bold">Shares</p>
