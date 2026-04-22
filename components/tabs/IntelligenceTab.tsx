@@ -498,7 +498,7 @@ export default function IntelligenceTab({
           <p className="text-dim mt-3 font-medium">{content.displayDate}</p>
         </div>
         <div className="flex flex-col gap-2 items-start md:items-end">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <span className="px-3 py-1.5 bg-accent-bg text-accent-text border border-accent/20 rounded-full text-xs font-bold tracking-wide">
               {profile.risk_tolerance.charAt(0).toUpperCase() + profile.risk_tolerance.slice(1)} Risk
             </span>
